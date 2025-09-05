@@ -63,13 +63,9 @@ public class GameManager : MonoBehaviour
 
         if (guard != null)
         {
-            // MEJORADO: Usar el nuevo método ResetGuard()
+            // Usar el nuevo método ResetGuard()
             guard.ResetGuard();
         }
-
-        // Pequeña pausa dramática
-        Time.timeScale = 0.1f;
-        Invoke("ResetTimeScale", 0.5f);
     }
 
     void ResetTimeScale()

@@ -1,5 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using System.Collections.Generic;
+using UnityEditorInternal.Profiling.Memory.Experimental;
 
 public class PlayerController : MonoBehaviour
 {
@@ -21,6 +23,16 @@ public class PlayerController : MonoBehaviour
 
     [Header("Stealth")]
     public float currentNoiseLevel = 0f;
+
+    [Header("Inventory")]
+    public List<string> keys = new List<string>();
+    public int maxKeys = 10;
+
+    [Header("Interaction UI")]
+    public string currentInteractionMessage = "";
+    private bool showingMessage = false;
+    private float messageTimer = 0f;
+    private float messageDuration = 3f;
 
     private Rigidbody rb;
     private bool isCrouched = false;
@@ -74,12 +86,14 @@ public class PlayerController : MonoBehaviour
         HandleCrouch();
         HandleMouseLook();
         HandleFlashlight();
+        HandleInteraction();
+        UpdateInteractionMessage();
         CheckGrounded();
     }
 
     void CheckGrounded()
     {
-        // Si no tienes groundCheck, usar una detección simple mejorada
+        // Si no hay groundCheck, usar una detección simple mejorada
         if (groundCheck == null)
         {
             // Raycast desde el centro del player hacia abajo
@@ -232,4 +246,75 @@ public class PlayerController : MonoBehaviour
             Cursor.visible = false;
         }
     }
+
+    void HandleInteraction()
+    {
+        if (Keyboard.current.eKey.wasPressedThisFrame)
+        {
+            Collider[] nearbyObjects = Physics.OverlapSphere(transform.position, 3f);
+
+            foreach (Collider obj in nearbyObjects)
+            {
+                Door door = obj.GetComponent<Door>();
+                if (door != null)
+                {
+                    door.TryInteract(this);
+                    break;
+                }
+            }
+        }
+    }
+
+    void UpdateInteractionMessage()
+    {
+        if (showingMessage)
+        {
+            messageTimer -= Time.deltaTime;
+            if (messageTimer <= 0f)
+            {
+                HideInteractionMessage();
+            }
+        }
+    }
+
+    public void PickupKey(KeyItem key)
+    {
+        if (keys.Count < maxKeys)
+        {
+            if (!keys.Contains(key.keyID))
+            {
+                keys.Add(key.keyID);
+                ShowInteractionMessage("Recogiste: " + key.keyName);
+                Debug.Log("Llave añadida al inventario: " + key.keyID);
+            }
+        }
+        else
+        {
+            ShowInteractionMessage("¡Inventario lleno!");
+        }
+    }
+
+    public bool HasKey(string keyID)
+    {
+        return keys.Contains(keyID);
+    }
+
+    public void UseKey(string keyID)
+    {
+    }
+
+    public void ShowInteractionMessage(string message)
+    {
+        currentInteractionMessage = message;
+        showingMessage = true;
+        messageTimer = messageDuration;
+    }
+
+    public void HideInteractionMessage()
+    {
+        currentInteractionMessage = "";
+        showingMessage = false;
+        messageTimer = 0f;
+    }
+
 }

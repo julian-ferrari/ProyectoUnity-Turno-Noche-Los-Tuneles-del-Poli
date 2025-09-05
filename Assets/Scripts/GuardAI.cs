@@ -17,8 +17,8 @@ public class GuardAI : MonoBehaviour
     public float chaseSpeed = 4f;
     public float investigateTime = 10f;
     public float maxChaseDistance = 20f;
-    public float minChaseDistance = 2f; // NUEVO: distancia mínima para evitar pegarse
-    public float losePlayerTime = 5f; // NUEVO: tiempo antes de perder al jugador
+    public float minChaseDistance = 2f; // Distancia mínima para evitar pegarse
+    public float losePlayerTime = 5f; // Tiempo antes de perder al jugador
 
     [Header("AI Behavior")]
     public bool canOpenDoors = true;
@@ -36,14 +36,14 @@ public class GuardAI : MonoBehaviour
     private int currentPatrolIndex = 0;
     private float waitTimer = 0f;
     private float investigateTimer = 0f;
-    private float losePlayerTimer = 0f; // NUEVO: contador para perder jugador
+    private float losePlayerTimer = 0f; // Contador para perder jugador
     private Transform player;
     private PlayerController playerController;
     private Vector3 lastKnownPlayerPosition;
     private Vector3 investigatePosition;
     private bool hasSeenPlayer = false;
 
-    // NUEVO: Variables para posición inicial
+    // Variables para posición inicial
     private Vector3 initialPosition;
     private Quaternion initialRotation;
     private int initialPatrolIndex;
@@ -76,7 +76,7 @@ public class GuardAI : MonoBehaviour
         StartCoroutine(SuspicionDecay());
     }
 
-    // NUEVO: Método público para resetear el guardia
+    // Método público para resetear el guardia
     public void ResetGuard()
     {
         // Resetear posición y rotación
@@ -179,7 +179,7 @@ public class GuardAI : MonoBehaviour
         float distanceToPlayer = Vector3.Distance(transform.position, player.position);
         bool playerDetected = false;
 
-        // Detección visual mejorada
+        // Detección visual
         if (distanceToPlayer <= detectionRange)
         {
             Vector3 directionToPlayer = (player.position - transform.position).normalized;
@@ -217,7 +217,7 @@ public class GuardAI : MonoBehaviour
             }
         }
 
-        // Detección auditiva mejorada
+        // Detección auditiva
         if (canHearFootsteps && distanceToPlayer <= hearingRange)
         {
             float noiseThreshold = 0.5f;
@@ -304,33 +304,33 @@ public class GuardAI : MonoBehaviour
         hasSeenPlayer = true;
         alertnessLevel = 100f;
 
-        // MEJORADO: Lógica de persecución con distancia mínima
-        if (distanceToPlayer > minChaseDistance)
+        if (distanceToPlayer > minChaseDistance + 1f) // Un poco más de margen
         {
-            // Solo moverse si está lejos
+            // Perseguir normalmente
             lastKnownPlayerPosition = player.position;
             MoveTowards(player.position, chaseSpeed);
-            losePlayerTimer = 0f; // Resetear timer de pérdida
+            losePlayerTimer = 0f;
+        }
+        else if (distanceToPlayer > 1.5f) // Zona intermedia
+        {
+            MoveTowards(player.position, chaseSpeed * 0.5f);
+            losePlayerTimer = 0f;
         }
         else
         {
-            // Si está muy cerca, no moverse tanto y capturar más fácil
-            if (distanceToPlayer < 1.5f)
-            {
-                CapturePlayer();
-                return;
-            }
-
-            // Moverse más lento cuando está cerca para no "pegarse"
-            MoveTowards(player.position, chaseSpeed * 0.3f);
+            // MUY cerca - capturar inmediatamente
+            CapturePlayer();
+            return;
         }
 
-        // MEJORADO: Sistema de pérdida de jugador más realista
         if (!HasLineOfSight(player.position))
         {
             losePlayerTimer += Time.deltaTime;
 
-            if (losePlayerTimer >= losePlayerTime || distanceToPlayer > maxChaseDistance)
+            // Si perdió la vista Y el jugador está lejos, perder más rápido
+            float loseTimeModifier = distanceToPlayer > 10f ? 2f : 1f;
+
+            if (losePlayerTimer >= (losePlayerTime / loseTimeModifier) || distanceToPlayer > maxChaseDistance)
             {
                 currentState = GuardState.Searching;
                 losePlayerTimer = 0f;
@@ -339,7 +339,7 @@ public class GuardAI : MonoBehaviour
         }
         else
         {
-            losePlayerTimer = 0f; // Reiniciar timer si lo ve
+            losePlayerTimer = 0f;
         }
     }
 
@@ -396,7 +396,7 @@ public class GuardAI : MonoBehaviour
         currentState = GuardState.Chasing;
         alertnessLevel = 100f;
         hasSeenPlayer = true;
-        losePlayerTimer = 0f; // NUEVO: Resetear timer
+        losePlayerTimer = 0f; // Resetear timer
 
         // Sonido de alerta
         if (alertSounds.Length > 0 && audioSource != null)
@@ -410,7 +410,6 @@ public class GuardAI : MonoBehaviour
     void CapturePlayer()
     {
         Debug.Log("¡Te atrapé! Reiniciando...");
-        // Aquí llamarías al GameManager para reiniciar
         GameManager gameManager = FindFirstObjectByType<GameManager>();
         if (gameManager != null)
         {
@@ -426,7 +425,7 @@ public class GuardAI : MonoBehaviour
         Rigidbody guardRb = GetComponent<Rigidbody>();
         if (guardRb != null)
         {
-            // MEJORADO: Movimiento más controlado con límite de velocidad
+            // Movimiento más controlado con límite de velocidad
             Vector3 movement = direction * speed * Time.fixedDeltaTime;
             Vector3 newPosition = guardRb.position + movement;
             guardRb.MovePosition(newPosition);
@@ -545,7 +544,7 @@ public class GuardAI : MonoBehaviour
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, hearingRange);
 
-        // NUEVO: Distancia mínima de persecución
+        // Distancia mínima de persecución
         Gizmos.color = Color.blue;
         Gizmos.DrawWireSphere(transform.position, minChaseDistance);
 
