@@ -1,4 +1,4 @@
-using UnityEngine;
+Ôªøusing UnityEngine;
 using UnityEngine.InputSystem;
 using System.Collections.Generic;
 using UnityEditorInternal.Profiling.Memory.Experimental;
@@ -53,30 +53,44 @@ public class PlayerController : MonoBehaviour
         rb = GetComponent<Rigidbody>();
         currentSpeed = walkSpeed;
 
-        // Configurar Rigidbody para evitar rotaciones no deseadas
+        // ‚úÖ CONFIGURACI√ìN MEJORADA DEL RIGIDBODY
         if (rb != null)
         {
-            rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+            // Congelar TODAS las rotaciones
+            rb.constraints = RigidbodyConstraints.FreezeRotationX |
+                            RigidbodyConstraints.FreezeRotationY |
+                            RigidbodyConstraints.FreezeRotationZ;
+
             rb.interpolation = RigidbodyInterpolation.Interpolate;
             rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
-            rb.linearDamping = 8f; // M·s drag para detenerse m·s r·pido
-            rb.angularDamping = 10f; // Evitar rotaciones indeseadas
+            rb.linearDamping = 10f;  // Aumentar para detener m√°s r√°pido
+            rb.angularDamping = 100f; // MUY alto para evitar rotaciones
+
+            // Asegurar que la masa sea consistente
+            rb.mass = 1f;
         }
 
-        // Configurar c·mara si no est· asignada
+        // ‚úÖ NUEVA configuraci√≥n de c√°mara
         if (playerCamera == null)
-            playerCamera = Camera.main;
+        {
+            // Buscar c√°mara hijo primero
+            playerCamera = GetComponentInChildren<Camera>();
 
-        // Bloquear y ocultar cursor
+            // Si no encuentra una, usar la Main Camera
+            if (playerCamera == null)
+                playerCamera = Camera.main;
+        }
+
+        // Solo configurar posici√≥n si la c√°mara NO es hijo ya
+        if (playerCamera != null && playerCamera.transform.parent != transform)
+        {
+            playerCamera.transform.position = transform.position + Vector3.up * 0.8f;
+            playerCamera.transform.rotation = transform.rotation;
+        }
+
+        // Cursor
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
-
-        // Posicionar c·mara en la "cabeza" del player
-        if (playerCamera != null)
-        {
-            playerCamera.transform.SetParent(transform);
-            playerCamera.transform.localPosition = new Vector3(0, 0.8f, 0);
-        }
     }
 
     void Update()
@@ -93,25 +107,33 @@ public class PlayerController : MonoBehaviour
 
     void CheckGrounded()
     {
-        // Si no hay groundCheck, usar una detecciÛn simple mejorada
-        if (groundCheck == null)
-        {
-            // Raycast desde el centro del player hacia abajo
-            Vector3 rayStart = transform.position + Vector3.up * 0.1f;
-            isGrounded = Physics.Raycast(rayStart, Vector3.down, 1.2f, groundMask);
+        // Raycast m√°s preciso desde m√∫ltiples puntos
+        Vector3 rayStart = transform.position + Vector3.up * 0.1f;
 
-            // Debug visual del raycast
-            Debug.DrawRay(rayStart, Vector3.down * 1.2f, isGrounded ? Color.green : Color.red);
-        }
-        else
-        {
-            isGrounded = Physics.CheckSphere(groundCheck.position, groundDistance, groundMask);
-        }
+        // Raycast principal
+        bool centerHit = Physics.Raycast(rayStart, Vector3.down, 1.2f, groundMask);
 
-        // Debug adicional
-        if (Time.frameCount % 60 == 0) // Solo cada 60 frames para no spam
+        // Raycasts adicionales para mejor detecci√≥n
+        Vector3 forward = transform.forward * 0.3f;
+        Vector3 right = transform.right * 0.3f;
+
+        bool frontHit = Physics.Raycast(rayStart + forward, Vector3.down, 1.2f, groundMask);
+        bool backHit = Physics.Raycast(rayStart - forward, Vector3.down, 1.2f, groundMask);
+        bool rightHit = Physics.Raycast(rayStart + right, Vector3.down, 1.2f, groundMask);
+        bool leftHit = Physics.Raycast(rayStart - right, Vector3.down, 1.2f, groundMask);
+
+        isGrounded = centerHit || frontHit || backHit || rightHit || leftHit;
+
+        // Debug visual
+        Debug.DrawRay(rayStart, Vector3.down * 1.2f, isGrounded ? Color.green : Color.red);
+        Debug.DrawRay(rayStart + forward, Vector3.down * 1.2f, frontHit ? Color.blue : Color.red);
+        Debug.DrawRay(rayStart + right, Vector3.down * 1.2f, rightHit ? Color.blue : Color.red);
+
+        // Debug solo ocasionalmente
+        if (Time.frameCount % 60 == 0)
         {
-            Debug.Log("isGrounded: " + isGrounded + " | Y velocity: " + rb.linearVelocity.y);
+            Debug.Log($"Ground Check - Center: {centerHit}, Front: {frontHit}, Back: {backHit}, Right: {rightHit}, Left: {leftHit}");
+            Debug.Log($"Player Y: {transform.position.y}, Velocity Y: {rb.linearVelocity.y}");
         }
     }
 
@@ -125,7 +147,7 @@ public class PlayerController : MonoBehaviour
         if (Keyboard.current.wKey.isPressed) moveInput.y = 1f;
         if (Keyboard.current.sKey.isPressed) moveInput.y = -1f;
 
-        // Movimiento relativo a la c·mara
+        // Movimiento relativo a la c√°mara
         Vector3 forward = transform.forward;
         Vector3 right = transform.right;
 
@@ -173,16 +195,21 @@ public class PlayerController : MonoBehaviour
         // Obtener input del mouse
         mouseInput = Mouse.current.delta.ReadValue() * mouseSensitivity * Time.deltaTime;
 
-        // RotaciÛn horizontal (Y axis) - rotar el player
+        // Rotaci√≥n horizontal (Y axis) - rotar el player
         transform.Rotate(0, mouseInput.x, 0);
 
-        // RotaciÛn vertical (X axis) - rotar la c·mara
+        // Rotaci√≥n vertical (X axis) - rotar la c√°mara
         verticalRotation -= mouseInput.y;
         verticalRotation = Mathf.Clamp(verticalRotation, -upDownRange, upDownRange);
 
         if (playerCamera != null)
         {
-            playerCamera.transform.localRotation = Quaternion.Euler(verticalRotation, 0, 0);
+            // Posici√≥n: seguir al player con offset
+            Vector3 cameraPosition = transform.position + Vector3.up * 0.8f;
+            playerCamera.transform.position = cameraPosition;
+
+            // Rotaci√≥n: combinar rotaci√≥n del player (Y) + c√°mara (X)
+            playerCamera.transform.rotation = Quaternion.Euler(verticalRotation, transform.eulerAngles.y, 0);
         }
     }
 
@@ -194,14 +221,14 @@ public class PlayerController : MonoBehaviour
             if (isCrouched)
             {
                 transform.localScale = new Vector3(1, 0.5f, 1);
-                // Bajar c·mara al agacharse
+                // Bajar c√°mara al agacharse
                 if (playerCamera != null)
                     playerCamera.transform.localPosition = new Vector3(0, 0.4f, 0);
             }
             else
             {
                 transform.localScale = new Vector3(1, 1, 1);
-                // Subir c·mara al pararse
+                // Subir c√°mara al pararse
                 if (playerCamera != null)
                     playerCamera.transform.localPosition = new Vector3(0, 0.8f, 0);
             }
@@ -212,12 +239,12 @@ public class PlayerController : MonoBehaviour
     {
         if (Keyboard.current.fKey.wasPressedThisFrame)
         {
-            // Buscar linterna en hijos o crear una b·sica
+            // Buscar linterna en hijos o crear una b√°sica
             Light flashlight = GetComponentInChildren<Light>();
 
             if (flashlight == null)
             {
-                // Crear linterna b·sica si no existe
+                // Crear linterna b√°sica si no existe
                 GameObject flashlightObj = new GameObject("Flashlight");
                 flashlightObj.transform.SetParent(playerCamera.transform);
                 flashlightObj.transform.localPosition = Vector3.zero;
@@ -237,7 +264,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    // Para poder desbloquear el cursor con ESC (˙til para testing)
+    // Para poder desbloquear el cursor con ESC (√∫til para testing)
     void OnApplicationFocus(bool hasFocus)
     {
         if (hasFocus)
@@ -285,12 +312,12 @@ public class PlayerController : MonoBehaviour
             {
                 keys.Add(key.keyID);
                 ShowInteractionMessage("Recogiste: " + key.keyName);
-                Debug.Log("Llave aÒadida al inventario: " + key.keyID);
+                Debug.Log("Llave a√±adida al inventario: " + key.keyID);
             }
         }
         else
         {
-            ShowInteractionMessage("°Inventario lleno!");
+            ShowInteractionMessage("¬°Inventario lleno!");
         }
     }
 
