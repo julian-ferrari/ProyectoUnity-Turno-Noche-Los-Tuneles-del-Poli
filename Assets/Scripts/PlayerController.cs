@@ -1,7 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.InputSystem;
 using System.Collections.Generic;
-using UnityEditorInternal.Profiling.Memory.Experimental;
 
 public class PlayerController : MonoBehaviour
 {
@@ -11,10 +10,17 @@ public class PlayerController : MonoBehaviour
     public float crouchSpeed = 1.5f;
     public float jumpForce = 5f;
 
+    [Header("Step Climbing")]
+    public float maxStepHeight = 0.25f;  // ✅ AJUSTADO: Valor más realista
+    public float stepCheckDistance = 0.4f;  // ✅ AJUSTADO: Más distancia para detectar
+    public LayerMask stepMask = 1;
+
     [Header("Camera")]
     public Camera playerCamera;
     public float mouseSensitivity = 2f;
     public float upDownRange = 60f;
+    public float normalCameraHeight = 0.8f;
+    public float crouchCameraHeight = 0.6f;  // ✅ Altura al agacharse menos extrema
 
     [Header("Ground Check")]
     public Transform groundCheck;
@@ -34,63 +40,111 @@ public class PlayerController : MonoBehaviour
     private float messageTimer = 0f;
     private float messageDuration = 3f;
 
+    // Components
     private Rigidbody rb;
+    private CapsuleCollider playerCollider;
+
+    // State variables
     private bool isCrouched = false;
     private bool isGrounded = false;
     private float currentSpeed;
     private float verticalRotation = 0;
 
-    // Variables para el nuevo Input System
+    // Camera variables
+    private Transform cameraHolder;
+    private float targetCameraHeight;
+    private float currentCameraHeight;
+
+    // ✅ COLLIDER ORIGINAL - Variables bien declaradas
+    private float originalColliderHeight;
+    private Vector3 originalColliderCenter;
+
+    // Input variables
     private Vector2 moveInput;
     private Vector2 mouseInput;
-    private bool jumpInput;
-    private bool sprintInput;
-    private bool crouchInput;
-    private bool flashlightInput;
 
     void Start()
     {
+        // Get components
         rb = GetComponent<Rigidbody>();
+        playerCollider = GetComponent<CapsuleCollider>();
         currentSpeed = walkSpeed;
 
-        // ✅ CONFIGURACIÓN MEJORADA DEL RIGIDBODY
+        // ✅ GUARDAR configuración original del collider ANTES de usarla
+        if (playerCollider != null)
+        {
+            originalColliderHeight = playerCollider.height;
+            originalColliderCenter = playerCollider.center;
+            Debug.Log($"Collider original guardado - Height: {originalColliderHeight}, Center: {originalColliderCenter}");
+        }
+        else
+        {
+            Debug.LogError("¡No se encontró CapsuleCollider en el jugador!");
+        }
+
+        // Rigidbody setup
         if (rb != null)
         {
-            // Congelar TODAS las rotaciones
             rb.constraints = RigidbodyConstraints.FreezeRotationX |
                             RigidbodyConstraints.FreezeRotationY |
                             RigidbodyConstraints.FreezeRotationZ;
 
             rb.interpolation = RigidbodyInterpolation.Interpolate;
             rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
-            rb.linearDamping = 10f;  // Aumentar para detener más rápido
-            rb.angularDamping = 100f; // MUY alto para evitar rotaciones
-
-            // Asegurar que la masa sea consistente
+            rb.linearDamping = 10f;
+            rb.angularDamping = 100f;
             rb.mass = 1f;
         }
 
-        // ✅ NUEVA configuración de cámara
+        // Camera setup
+        SetupCamera();
+
+        // Cursor setup
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
+
+        // Initialize camera height
+        targetCameraHeight = normalCameraHeight;
+        currentCameraHeight = normalCameraHeight;
+    }
+
+    void SetupCamera()
+    {
+        // Find camera if not assigned
         if (playerCamera == null)
         {
-            // Buscar cámara hijo primero
             playerCamera = GetComponentInChildren<Camera>();
-
-            // Si no encuentra una, usar la Main Camera
             if (playerCamera == null)
                 playerCamera = Camera.main;
         }
 
-        // Solo configurar posición si la cámara NO es hijo ya
-        if (playerCamera != null && playerCamera.transform.parent != transform)
+        if (playerCamera != null)
         {
-            playerCamera.transform.position = transform.position + Vector3.up * 0.8f;
-            playerCamera.transform.rotation = transform.rotation;
-        }
+            // Create camera holder as child of player
+            GameObject holderObj = GameObject.Find("CameraHolder");
+            if (holderObj == null || holderObj.transform.parent != transform)
+            {
+                holderObj = new GameObject("CameraHolder");
+                holderObj.transform.SetParent(transform);
+                holderObj.transform.localPosition = new Vector3(0, normalCameraHeight, 0);
+                holderObj.transform.localRotation = Quaternion.identity;
+            }
+            cameraHolder = holderObj.transform;
 
-        // Cursor
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
+            // Make camera child of camera holder
+            if (playerCamera.transform.parent != cameraHolder)
+            {
+                playerCamera.transform.SetParent(cameraHolder);
+                playerCamera.transform.localPosition = Vector3.zero;
+                playerCamera.transform.localRotation = Quaternion.identity;
+            }
+
+            Debug.Log("Cámara configurada correctamente");
+        }
+        else
+        {
+            Debug.LogError("No se encontró ninguna cámara!");
+        }
     }
 
     void Update()
@@ -102,18 +156,24 @@ public class PlayerController : MonoBehaviour
         HandleFlashlight();
         HandleInteraction();
         UpdateInteractionMessage();
+        UpdateCameraHeight();
         CheckGrounded();
+    }
+
+    void UpdateCameraHeight()
+    {
+        if (cameraHolder != null)
+        {
+            currentCameraHeight = Mathf.Lerp(currentCameraHeight, targetCameraHeight, Time.deltaTime * 8f);
+            cameraHolder.transform.localPosition = new Vector3(0, currentCameraHeight, 0);
+        }
     }
 
     void CheckGrounded()
     {
-        // Raycast más preciso desde múltiples puntos
         Vector3 rayStart = transform.position + Vector3.up * 0.1f;
-
-        // Raycast principal
         bool centerHit = Physics.Raycast(rayStart, Vector3.down, 1.2f, groundMask);
 
-        // Raycasts adicionales para mejor detección
         Vector3 forward = transform.forward * 0.3f;
         Vector3 right = transform.right * 0.3f;
 
@@ -124,22 +184,12 @@ public class PlayerController : MonoBehaviour
 
         isGrounded = centerHit || frontHit || backHit || rightHit || leftHit;
 
-        // Debug visual
+        // Debug rays (optional)
         Debug.DrawRay(rayStart, Vector3.down * 1.2f, isGrounded ? Color.green : Color.red);
-        Debug.DrawRay(rayStart + forward, Vector3.down * 1.2f, frontHit ? Color.blue : Color.red);
-        Debug.DrawRay(rayStart + right, Vector3.down * 1.2f, rightHit ? Color.blue : Color.red);
-
-        // Debug solo ocasionalmente
-        if (Time.frameCount % 60 == 0)
-        {
-            Debug.Log($"Ground Check - Center: {centerHit}, Front: {frontHit}, Back: {backHit}, Right: {rightHit}, Left: {leftHit}");
-            Debug.Log($"Player Y: {transform.position.y}, Velocity Y: {rb.linearVelocity.y}");
-        }
     }
 
     void HandleMovement()
     {
-        // Obtener input de movimiento
         moveInput = Vector2.zero;
 
         if (Keyboard.current.aKey.isPressed) moveInput.x = -1f;
@@ -147,16 +197,19 @@ public class PlayerController : MonoBehaviour
         if (Keyboard.current.wKey.isPressed) moveInput.y = 1f;
         if (Keyboard.current.sKey.isPressed) moveInput.y = -1f;
 
-        // Movimiento relativo a la cámara
         Vector3 forward = transform.forward;
         Vector3 right = transform.right;
 
         Vector3 movement = (forward * moveInput.y + right * moveInput.x).normalized * currentSpeed;
 
-        // Aplicar movimiento manteniendo velocidad Y (para saltos)
+        if (movement.magnitude > 0 && isGrounded)
+        {
+            movement = HandleStepClimbing(movement);
+        }
+
         rb.linearVelocity = new Vector3(movement.x, rb.linearVelocity.y, movement.z);
 
-        // Calcular nivel de ruido
+        // Calculate noise level
         if (movement.magnitude > 0)
         {
             if (Keyboard.current.leftShiftKey.isPressed && !isCrouched)
@@ -181,35 +234,67 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    Vector3 HandleStepClimbing(Vector3 movement)
+    {
+        if (movement.magnitude < 0.1f) return movement;
+
+        float colliderRadius = playerCollider != null ? playerCollider.radius : 0.5f;
+        float colliderHeight = playerCollider != null ? playerCollider.height : 1.8f;
+
+        Vector3 rayDirection = movement.normalized;
+
+        // 1. Raycast al frente para detectar obstáculo
+        Vector3 origin = transform.position + Vector3.up * 0.1f;
+        if (!Physics.Raycast(origin, rayDirection, out RaycastHit frontHit, stepCheckDistance, stepMask))
+            return movement;
+
+        // 2. Revisar el suelo justo después del obstáculo
+        Vector3 stepCheckOrigin = frontHit.point + Vector3.up * maxStepHeight + rayDirection * 0.05f;
+        if (!Physics.Raycast(stepCheckOrigin, Vector3.down, out RaycastHit stepHit, maxStepHeight + 0.3f, groundMask))
+            return movement;
+
+        float stepHeight = stepHit.point.y - transform.position.y;
+
+        // 3. Si la altura del "escalón" está dentro del rango
+        if (stepHeight > 0.05f && stepHeight <= maxStepHeight)
+        {
+            // ✅ Subida de escalón independiente de la velocidad de caminar/correr
+            float climbSpeed = 12f; // siempre rápido, podés subirlo a 15f si querés más "instantáneo"
+
+            Vector3 targetPos = new Vector3(rb.position.x, stepHit.point.y, rb.position.z);
+            rb.position = Vector3.Lerp(rb.position, targetPos, Time.deltaTime * climbSpeed);
+
+            // Mantener el movimiento hacia adelante sin modificar
+            return movement;
+        }
+
+        return movement;
+    }
+
     void HandleJump()
     {
         if (Keyboard.current.spaceKey.wasPressedThisFrame && isGrounded)
         {
             rb.linearVelocity = new Vector3(rb.linearVelocity.x, jumpForce, rb.linearVelocity.z);
-            currentNoiseLevel = 2f; // El salto hace ruido
+            currentNoiseLevel = 2f;
         }
     }
 
+
     void HandleMouseLook()
     {
-        // Obtener input del mouse
-        mouseInput = Mouse.current.delta.ReadValue() * mouseSensitivity * Time.deltaTime;
+        mouseInput = Mouse.current.delta.ReadValue() * mouseSensitivity * 0.02f;
 
-        // Rotación horizontal (Y axis) - rotar el player
+        // Horizontal rotation - rotate player
         transform.Rotate(0, mouseInput.x, 0);
 
-        // Rotación vertical (X axis) - rotar la cámara
+        // Vertical rotation - rotate camera holder
         verticalRotation -= mouseInput.y;
         verticalRotation = Mathf.Clamp(verticalRotation, -upDownRange, upDownRange);
 
-        if (playerCamera != null)
+        if (cameraHolder != null)
         {
-            // Posición: seguir al player con offset
-            Vector3 cameraPosition = transform.position + Vector3.up * 0.8f;
-            playerCamera.transform.position = cameraPosition;
-
-            // Rotación: combinar rotación del player (Y) + cámara (X)
-            playerCamera.transform.rotation = Quaternion.Euler(verticalRotation, transform.eulerAngles.y, 0);
+            cameraHolder.transform.localRotation = Quaternion.Euler(verticalRotation, 0, 0);
         }
     }
 
@@ -218,20 +303,35 @@ public class PlayerController : MonoBehaviour
         if (Keyboard.current.leftCtrlKey.wasPressedThisFrame)
         {
             isCrouched = !isCrouched;
+
+            // ✅ AGACHARSE ARREGLADO - Solo cambiar altura de cámara
             if (isCrouched)
             {
-                transform.localScale = new Vector3(1, 0.5f, 1);
-                // Bajar cámara al agacharse
-                if (playerCamera != null)
-                    playerCamera.transform.localPosition = new Vector3(0, 0.4f, 0);
+                targetCameraHeight = crouchCameraHeight;
+
+                // ✅ CAMBIO SUTIL del collider para agacharse
+                if (playerCollider != null)
+                {
+                    playerCollider.height = originalColliderHeight * 0.7f; // Reducir a 70%
+                    // Mantener los pies en el suelo
+                    playerCollider.center = new Vector3(originalColliderCenter.x,
+                                                       originalColliderCenter.y * 0.7f,
+                                                       originalColliderCenter.z);
+                }
             }
             else
             {
-                transform.localScale = new Vector3(1, 1, 1);
-                // Subir cámara al pararse
-                if (playerCamera != null)
-                    playerCamera.transform.localPosition = new Vector3(0, 0.8f, 0);
+                targetCameraHeight = normalCameraHeight;
+
+                // ✅ RESTAURAR collider original EXACTO
+                if (playerCollider != null)
+                {
+                    playerCollider.height = originalColliderHeight;
+                    playerCollider.center = originalColliderCenter;
+                }
             }
+
+            Debug.Log($"Crouched: {isCrouched}, Camera target: {targetCameraHeight}, Collider height: {playerCollider?.height}");
         }
     }
 
@@ -239,12 +339,10 @@ public class PlayerController : MonoBehaviour
     {
         if (Keyboard.current.fKey.wasPressedThisFrame)
         {
-            // Buscar linterna en hijos o crear una básica
             Light flashlight = GetComponentInChildren<Light>();
 
-            if (flashlight == null)
+            if (flashlight == null && playerCamera != null)
             {
-                // Crear linterna básica si no existe
                 GameObject flashlightObj = new GameObject("Flashlight");
                 flashlightObj.transform.SetParent(playerCamera.transform);
                 flashlightObj.transform.localPosition = Vector3.zero;
@@ -259,12 +357,14 @@ public class PlayerController : MonoBehaviour
                 flashlight.enabled = false;
             }
 
-            flashlight.enabled = !flashlight.enabled;
-            Debug.Log("Linterna " + (flashlight.enabled ? "encendida" : "apagada"));
+            if (flashlight != null)
+            {
+                flashlight.enabled = !flashlight.enabled;
+                Debug.Log("Linterna " + (flashlight.enabled ? "encendida" : "apagada"));
+            }
         }
     }
 
-    // Para poder desbloquear el cursor con ESC (útil para testing)
     void OnApplicationFocus(bool hasFocus)
     {
         if (hasFocus)
@@ -343,5 +443,4 @@ public class PlayerController : MonoBehaviour
         showingMessage = false;
         messageTimer = 0f;
     }
-
 }

@@ -33,7 +33,7 @@ public class Door : MonoBehaviour
         closedRotation = doorPivot.rotation;
 
         float finalAngle = openInward ? -openAngle : openAngle;
-        openRotation = closedRotation * Quaternion.Euler(0, finalAngle, 0);
+        openRotation = closedRotation * Quaternion.Euler(0, 0, finalAngle);
 
         // Configurar trigger
         Collider col = GetComponent<Collider>();
