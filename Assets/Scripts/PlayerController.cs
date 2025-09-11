@@ -1,5 +1,4 @@
 ﻿using UnityEngine;
-using UnityEngine.InputSystem;
 using System.Collections.Generic;
 
 public class PlayerController : MonoBehaviour
@@ -10,11 +9,6 @@ public class PlayerController : MonoBehaviour
     public float crouchSpeed = 1.5f;
     public float jumpForce = 5f;
 
-    [Header("Step Climbing")]
-    public float maxStepHeight = 0.25f;
-    public float stepCheckDistance = 0.4f;
-    public LayerMask stepMask = 1;
-
     [Header("Camera")]
     public Camera playerCamera;
     public float mouseSensitivity = 2f;
@@ -23,7 +17,6 @@ public class PlayerController : MonoBehaviour
     public float crouchCameraHeight = 0.6f;
 
     [Header("Ground Check")]
-    public Transform groundCheck;
     public float groundDistance = 0.4f;
     public LayerMask groundMask = 1;
 
@@ -40,10 +33,12 @@ public class PlayerController : MonoBehaviour
     private float messageTimer = 0f;
     private float messageDuration = 3f;
 
+    [Header("Flashlight")]
+    public Light flashlight;
+
     // Components
     private Rigidbody rb;
     private CapsuleCollider playerCollider;
-    private FlashlightFPSController flashlightController; // ✅ Nueva referencia
 
     // State variables
     private bool isCrouched = false;
@@ -60,10 +55,6 @@ public class PlayerController : MonoBehaviour
     private float originalColliderHeight;
     private Vector3 originalColliderCenter;
 
-    // Input variables
-    private Vector2 moveInput;
-    private Vector2 mouseInput;
-
     void Start()
     {
         // Get components
@@ -76,31 +67,18 @@ public class PlayerController : MonoBehaviour
         {
             originalColliderHeight = playerCollider.height;
             originalColliderCenter = playerCollider.center;
-            Debug.Log($"Collider original guardado - Height: {originalColliderHeight}, Center: {originalColliderCenter}");
-        }
-        else
-        {
-            Debug.LogError("¡No se encontró CapsuleCollider en el jugador!");
         }
 
-        // Rigidbody setup
+        // Rigidbody setup SIMPLE
         if (rb != null)
         {
             rb.constraints = RigidbodyConstraints.FreezeRotationX |
                             RigidbodyConstraints.FreezeRotationY |
                             RigidbodyConstraints.FreezeRotationZ;
-
-            rb.interpolation = RigidbodyInterpolation.Interpolate;
-            rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
-            rb.linearDamping = 10f;
-            rb.angularDamping = 100f;
-            rb.mass = 1f;
         }
 
         // Camera setup
         SetupCamera();
-
-        // ✅ Configurar linterna FPS después de la cámara
         SetupFlashlight();
 
         // Cursor setup
@@ -114,7 +92,6 @@ public class PlayerController : MonoBehaviour
 
     void SetupCamera()
     {
-        // Find camera if not assigned
         if (playerCamera == null)
         {
             playerCamera = GetComponentInChildren<Camera>();
@@ -124,119 +101,131 @@ public class PlayerController : MonoBehaviour
 
         if (playerCamera != null)
         {
-            // Create camera holder as child of player
-            GameObject holderObj = GameObject.Find("CameraHolder");
-            if (holderObj == null || holderObj.transform.parent != transform)
-            {
-                holderObj = new GameObject("CameraHolder");
-                holderObj.transform.SetParent(transform);
-                holderObj.transform.localPosition = new Vector3(0, normalCameraHeight, 0);
-                holderObj.transform.localRotation = Quaternion.identity;
-            }
+            // Create camera holder
+            GameObject holderObj = new GameObject("CameraHolder");
+            holderObj.transform.SetParent(transform);
+            holderObj.transform.localPosition = new Vector3(0, normalCameraHeight, 0);
+            holderObj.transform.localRotation = Quaternion.identity;
             cameraHolder = holderObj.transform;
 
-            // Make camera child of camera holder
-            if (playerCamera.transform.parent != cameraHolder)
-            {
-                playerCamera.transform.SetParent(cameraHolder);
-                playerCamera.transform.localPosition = Vector3.zero;
-                playerCamera.transform.localRotation = Quaternion.identity;
-            }
-
-            Debug.Log("Cámara configurada correctamente");
-        }
-        else
-        {
-            Debug.LogError("No se encontró ninguna cámara!");
+            playerCamera.transform.SetParent(cameraHolder);
+            playerCamera.transform.localPosition = Vector3.zero;
+            playerCamera.transform.localRotation = Quaternion.identity;
         }
     }
 
-    // ✅ NUEVO: Configurar sistema de linterna FPS
     void SetupFlashlight()
     {
         if (playerCamera != null)
         {
-            // Buscar si ya existe el componente
-            flashlightController = playerCamera.GetComponent<FlashlightFPSController>();
+            Debug.Log("=== SETUP LINTERNA ===");
+            Debug.Log("Buscando objetos hijos de la cámara:");
 
-            // Si no existe, agregarlo
-            if (flashlightController == null)
+            // Mostrar TODOS los hijos de la cámara
+            for (int i = 0; i < playerCamera.transform.childCount; i++)
             {
-                flashlightController = playerCamera.gameObject.AddComponent<FlashlightFPSController>();
-                Debug.Log("FlashlightFPSController agregado a la cámara");
+                Transform child = playerCamera.transform.GetChild(i);
+                Debug.Log($"  Hijo {i}: '{child.name}' - Activo: {child.gameObject.activeSelf}");
+
+                // Mostrar componentes de cada hijo
+                Component[] components = child.GetComponents<Component>();
+                foreach (Component comp in components)
+                {
+                    Debug.Log($"    - Componente: {comp.GetType().Name}");
+                }
             }
-        }
-        else
-        {
-            Debug.LogError("No se puede configurar linterna: cámara no encontrada");
+
+            // Buscar la luz específicamente
+            flashlight = playerCamera.transform.Find("LuzLinterna")?.GetComponent<Light>();
+
+            if (flashlight == null)
+            {
+                Debug.LogError("❌ No encontró 'LuzLinterna'! Buscando cualquier Light...");
+
+                // Buscar cualquier Light como backup
+                flashlight = playerCamera.GetComponentInChildren<Light>();
+
+                if (flashlight != null)
+                {
+                    Debug.Log($"✅ Encontró Light en: '{flashlight.name}'");
+                }
+                else
+                {
+                    Debug.LogError("❌ No se encontró NINGUNA Light!");
+                }
+            }
+            else
+            {
+                Debug.Log($"✅ Encontró LuzLinterna correctamente: {flashlight.name}");
+            }
+
+            if (flashlight != null)
+            {
+                flashlight.enabled = false;
+                Debug.Log("🔦 Linterna configurada y apagada inicialmente");
+            }
+
+            Debug.Log("=== FIN SETUP LINTERNA ===");
         }
     }
 
     void Update()
     {
+        HandleInput();
         HandleMovement();
-        HandleJump();
-        HandleCrouch();
         HandleMouseLook();
-        HandleFlashlight(); // ✅ Mantener por compatibilidad, pero ahora usa el nuevo sistema
-        HandleInteraction();
-        UpdateInteractionMessage();
         UpdateCameraHeight();
         CheckGrounded();
+        UpdateInteractionMessage();
     }
 
-    void UpdateCameraHeight()
+    void HandleInput()
     {
-        if (cameraHolder != null)
+        // Jump
+        if (Input.GetKeyDown(KeyCode.Space) && isGrounded)
         {
-            currentCameraHeight = Mathf.Lerp(currentCameraHeight, targetCameraHeight, Time.deltaTime * 8f);
-            cameraHolder.transform.localPosition = new Vector3(0, currentCameraHeight, 0);
+            HandleJump();
         }
-    }
 
-    void CheckGrounded()
-    {
-        Vector3 rayStart = transform.position + Vector3.up * 0.1f;
-        bool centerHit = Physics.Raycast(rayStart, Vector3.down, 1.2f, groundMask);
+        // Crouch
+        if (Input.GetKeyDown(KeyCode.LeftControl))
+        {
+            HandleCrouch();
+        }
 
-        Vector3 forward = transform.forward * 0.3f;
-        Vector3 right = transform.right * 0.3f;
+        // Flashlight
+        if (Input.GetKeyDown(KeyCode.F))
+        {
+            ToggleFlashlight();
+        }
 
-        bool frontHit = Physics.Raycast(rayStart + forward, Vector3.down, 1.2f, groundMask);
-        bool backHit = Physics.Raycast(rayStart - forward, Vector3.down, 1.2f, groundMask);
-        bool rightHit = Physics.Raycast(rayStart + right, Vector3.down, 1.2f, groundMask);
-        bool leftHit = Physics.Raycast(rayStart - right, Vector3.down, 1.2f, groundMask);
-
-        isGrounded = centerHit || frontHit || backHit || rightHit || leftHit;
-
-        Debug.DrawRay(rayStart, Vector3.down * 1.2f, isGrounded ? Color.green : Color.red);
+        // Interaction
+        if (Input.GetKeyDown(KeyCode.E))
+        {
+            HandleInteraction();
+        }
     }
 
     void HandleMovement()
     {
-        moveInput = Vector2.zero;
+        // Obtener input DIRECTAMENTE
+        float horizontal = 0f;
+        float vertical = 0f;
 
-        if (Keyboard.current.aKey.isPressed) moveInput.x = -1f;
-        if (Keyboard.current.dKey.isPressed) moveInput.x = 1f;
-        if (Keyboard.current.wKey.isPressed) moveInput.y = 1f;
-        if (Keyboard.current.sKey.isPressed) moveInput.y = -1f;
+        if (Input.GetKey(KeyCode.W)) vertical = 1f;
+        if (Input.GetKey(KeyCode.S)) vertical = -1f;
+        if (Input.GetKey(KeyCode.A)) horizontal = -1f;
+        if (Input.GetKey(KeyCode.D)) horizontal = 1f;
 
+        // Calcular dirección de movimiento
         Vector3 forward = transform.forward;
         Vector3 right = transform.right;
+        Vector3 movement = (forward * vertical + right * horizontal).normalized;
 
-        Vector3 movement = (forward * moveInput.y + right * moveInput.x).normalized * currentSpeed;
-
-        if (movement.magnitude > 0 && isGrounded)
-        {
-            movement = HandleStepClimbing(movement);
-        }
-
-        rb.linearVelocity = new Vector3(movement.x, rb.linearVelocity.y, movement.z);
-
-        // Calculate noise level
+        // Determinar velocidad
         if (movement.magnitude > 0)
         {
-            if (Keyboard.current.leftShiftKey.isPressed && !isCrouched)
+            if (Input.GetKey(KeyCode.LeftShift) && !isCrouched)
             {
                 currentSpeed = runSpeed;
                 currentNoiseLevel = 3f;
@@ -256,54 +245,23 @@ public class PlayerController : MonoBehaviour
         {
             currentNoiseLevel = 0f;
         }
-    }
 
-    Vector3 HandleStepClimbing(Vector3 movement)
-    {
-        if (movement.magnitude < 0.1f) return movement;
-
-        float colliderRadius = playerCollider != null ? playerCollider.radius : 0.5f;
-        float colliderHeight = playerCollider != null ? playerCollider.height : 1.8f;
-
-        Vector3 rayDirection = movement.normalized;
-        Vector3 origin = transform.position + Vector3.up * 0.1f;
-
-        if (!Physics.Raycast(origin, rayDirection, out RaycastHit frontHit, stepCheckDistance, stepMask))
-            return movement;
-
-        Vector3 stepCheckOrigin = frontHit.point + Vector3.up * maxStepHeight + rayDirection * 0.05f;
-        if (!Physics.Raycast(stepCheckOrigin, Vector3.down, out RaycastHit stepHit, maxStepHeight + 0.3f, groundMask))
-            return movement;
-
-        float stepHeight = stepHit.point.y - transform.position.y;
-
-        if (stepHeight > 0.05f && stepHeight <= maxStepHeight)
-        {
-            float climbSpeed = 12f;
-            Vector3 targetPos = new Vector3(rb.position.x, stepHit.point.y, rb.position.z);
-            rb.position = Vector3.Lerp(rb.position, targetPos, Time.deltaTime * climbSpeed);
-            return movement;
-        }
-
-        return movement;
-    }
-
-    void HandleJump()
-    {
-        if (Keyboard.current.spaceKey.wasPressedThisFrame && isGrounded)
-        {
-            rb.linearVelocity = new Vector3(rb.linearVelocity.x, jumpForce, rb.linearVelocity.z);
-            currentNoiseLevel = 2f;
-        }
+        // Aplicar movimiento SIMPLE Y DIRECTO
+        Vector3 moveVelocity = movement * currentSpeed;
+        rb.linearVelocity = new Vector3(moveVelocity.x, rb.linearVelocity.y, moveVelocity.z);
     }
 
     void HandleMouseLook()
     {
-        mouseInput = Mouse.current.delta.ReadValue() * mouseSensitivity * 0.02f;
+        // Mouse look
+        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
+        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
 
-        transform.Rotate(0, mouseInput.x, 0);
+        // Rotación horizontal del jugador
+        transform.Rotate(0, mouseX, 0);
 
-        verticalRotation -= mouseInput.y;
+        // Rotación vertical de la cámara
+        verticalRotation -= mouseY;
         verticalRotation = Mathf.Clamp(verticalRotation, -upDownRange, upDownRange);
 
         if (cameraHolder != null)
@@ -312,109 +270,159 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    void UpdateCameraHeight()
+    {
+        if (cameraHolder != null)
+        {
+            currentCameraHeight = Mathf.Lerp(currentCameraHeight, targetCameraHeight, Time.deltaTime * 8f);
+            cameraHolder.transform.localPosition = new Vector3(0, currentCameraHeight, 0);
+        }
+    }
+
+    void CheckGrounded()
+    {
+        // Check si está en el suelo
+        Vector3 rayStart = transform.position + Vector3.up * 0.1f;
+        isGrounded = Physics.Raycast(rayStart, Vector3.down, 1.5f, groundMask);
+
+        Debug.DrawRay(rayStart, Vector3.down * 1.5f, isGrounded ? Color.green : Color.red);
+    }
+
+    void HandleJump()
+    {
+        rb.linearVelocity = new Vector3(rb.linearVelocity.x, jumpForce, rb.linearVelocity.z);
+        currentNoiseLevel = 2f;
+    }
+
     void HandleCrouch()
     {
-        if (Keyboard.current.leftCtrlKey.wasPressedThisFrame)
+        isCrouched = !isCrouched;
+
+        if (isCrouched)
         {
-            isCrouched = !isCrouched;
-
-            if (isCrouched)
+            targetCameraHeight = crouchCameraHeight;
+            if (playerCollider != null)
             {
-                targetCameraHeight = crouchCameraHeight;
-
-                if (playerCollider != null)
-                {
-                    playerCollider.height = originalColliderHeight * 0.7f;
-                    playerCollider.center = new Vector3(originalColliderCenter.x,
-                                                       originalColliderCenter.y * 0.7f,
-                                                       originalColliderCenter.z);
-                }
+                playerCollider.height = originalColliderHeight * 0.7f;
+                playerCollider.center = new Vector3(originalColliderCenter.x,
+                                                   originalColliderCenter.y * 0.7f,
+                                                   originalColliderCenter.z);
             }
-            else
-            {
-                targetCameraHeight = normalCameraHeight;
-
-                if (playerCollider != null)
-                {
-                    playerCollider.height = originalColliderHeight;
-                    playerCollider.center = originalColliderCenter;
-                }
-            }
-
-            Debug.Log($"Crouched: {isCrouched}, Camera target: {targetCameraHeight}, Collider height: {playerCollider?.height}");
         }
+        else
+        {
+            targetCameraHeight = normalCameraHeight;
+            if (playerCollider != null)
+            {
+                playerCollider.height = originalColliderHeight;
+                playerCollider.center = originalColliderCenter;
+            }
+        }
+
+        Debug.Log("Crouch: " + isCrouched);
     }
 
-    // ✅ MODIFICADO: Ahora usa el nuevo sistema de linterna
-    void HandleFlashlight()
+
+    void ToggleFlashlight()
     {
-        if (Keyboard.current.fKey.wasPressedThisFrame)
-        {
-            if (flashlightController != null)
-            {
-                // Usar el nuevo sistema
-                flashlightController.ToggleFlashlight();
-            }
-            else
-            {
-                // Fallback al sistema anterior si no está disponible
-                Debug.LogWarning("FlashlightFPSController no disponible, usando sistema básico");
-                HandleFlashlightLegacy();
-            }
-        }
-    }
-
-    // ✅ Sistema de linterna anterior como fallback
-    void HandleFlashlightLegacy()
-    {
-        Light flashlight = GetComponentInChildren<Light>();
-
-        if (flashlight == null && playerCamera != null)
-        {
-            GameObject flashlightObj = new GameObject("Flashlight");
-            flashlightObj.transform.SetParent(playerCamera.transform);
-            flashlightObj.transform.localPosition = Vector3.zero;
-            flashlightObj.transform.localRotation = Quaternion.identity;
-
-            flashlight = flashlightObj.AddComponent<Light>();
-            flashlight.type = LightType.Spot;
-            flashlight.range = 10f;
-            flashlight.spotAngle = 45f;
-            flashlight.intensity = 2f;
-            flashlight.color = Color.white;
-            flashlight.enabled = false;
-        }
+        Debug.Log("=== TOGGLE LINTERNA ===");
 
         if (flashlight != null)
         {
             flashlight.enabled = !flashlight.enabled;
-            Debug.Log("Linterna " + (flashlight.enabled ? "encendida" : "apagada"));
+            Debug.Log($"🔦 Linterna {(flashlight.enabled ? "ENCENDIDA" : "APAGADA")}");
+
+            // Buscar y mostrar TODOS los objetos relacionados con linterna
+            Debug.Log("Objetos en la cámara después del toggle:");
+            for (int i = 0; i < playerCamera.transform.childCount; i++)
+            {
+                Transform child = playerCamera.transform.GetChild(i);
+                bool hasRenderer = child.GetComponent<Renderer>() != null;
+                bool hasLight = child.GetComponent<Light>() != null;
+
+                Debug.Log($"  {child.name}: Activo={child.gameObject.activeSelf}, Renderer={hasRenderer}, Light={hasLight}");
+
+                if (hasRenderer)
+                {
+                    Renderer rend = child.GetComponent<Renderer>();
+                    Debug.Log($"    Renderer enabled: {rend.enabled}");
+                }
+            }
+
+            // INTENTAR FORZAR VISIBILIDAD DE TODOS LOS MODELOS
+            foreach (Transform child in playerCamera.transform)
+            {
+                // Si no es la luz, es potencialmente el modelo
+                if (child.GetComponent<Light>() == null)
+                {
+                    child.gameObject.SetActive(true);
+
+                    Renderer rend = child.GetComponent<Renderer>();
+                    if (rend != null)
+                    {
+                        rend.enabled = true;
+                        Debug.Log($"✅ Forzado visible: {child.name}");
+                    }
+
+                    MeshRenderer mesh = child.GetComponent<MeshRenderer>();
+                    if (mesh != null)
+                    {
+                        mesh.enabled = true;
+                        Debug.Log($"✅ MeshRenderer enabled: {child.name}");
+                    }
+                }
+            }
         }
+        else
+        {
+            Debug.LogError("❌ flashlight es NULL!");
+
+            // Intentar encontrar la luz nuevamente
+            Debug.Log("Intentando encontrar la luz nuevamente...");
+            SetupFlashlight();
+        }
+
+        Debug.Log("=== FIN TOGGLE LINTERNA ===");
     }
 
-    void OnApplicationFocus(bool hasFocus)
+    Transform FindFlashlightModel(Transform parent)
     {
-        if (hasFocus)
+        // Buscar por nombres comunes de modelo de linterna
+        string[] possibleNames = { "modelo de la linterna", "linterna", "Linterna", "FlashlightModel", "Flashlight_Model" };
+
+        foreach (string name in possibleNames)
         {
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
+            Transform found = parent.Find(name);
+            if (found != null && found != flashlight.transform)
+            {
+                return found;
+            }
         }
+
+        // Si no encuentra por nombre, buscar cualquier hijo que NO sea la luz
+        for (int i = 0; i < parent.childCount; i++)
+        {
+            Transform child = parent.GetChild(i);
+            if (child.GetComponent<Light>() == null) // No es la luz, podría ser el modelo
+            {
+                return child;
+            }
+        }
+
+        return null;
     }
 
     void HandleInteraction()
     {
-        if (Keyboard.current.eKey.wasPressedThisFrame)
-        {
-            Collider[] nearbyObjects = Physics.OverlapSphere(transform.position, 3f);
+        Collider[] nearbyObjects = Physics.OverlapSphere(transform.position, 3f);
 
-            foreach (Collider obj in nearbyObjects)
+        foreach (Collider obj in nearbyObjects)
+        {
+            Door door = obj.GetComponent<Door>();
+            if (door != null)
             {
-                Door door = obj.GetComponent<Door>();
-                if (door != null)
-                {
-                    door.TryInteract(this);
-                    break;
-                }
+                door.TryInteract(this);
+                break;
             }
         }
     }
@@ -431,6 +439,16 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    void OnApplicationFocus(bool hasFocus)
+    {
+        if (hasFocus)
+        {
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+        }
+    }
+
+    // Métodos públicos para inventario y mensajes
     public void PickupKey(KeyItem key)
     {
         if (keys.Count < maxKeys)
@@ -455,6 +473,7 @@ public class PlayerController : MonoBehaviour
 
     public void UseKey(string keyID)
     {
+        // Opcional: remover la llave después de usar
     }
 
     public void ShowInteractionMessage(string message)
@@ -462,6 +481,7 @@ public class PlayerController : MonoBehaviour
         currentInteractionMessage = message;
         showingMessage = true;
         messageTimer = messageDuration;
+        Debug.Log("Mensaje: " + message);
     }
 
     public void HideInteractionMessage()
@@ -470,23 +490,4 @@ public class PlayerController : MonoBehaviour
         showingMessage = false;
         messageTimer = 0f;
     }
-
-    // ✅ MÉTODOS COMENTADOS temporalmente para el debug
-    /*
-    public void SetFlashlightVisibility(bool visible)
-    {
-        if (flashlightController != null)
-        {
-            flashlightController.SetFlashlightVisibility(visible);
-        }
-    }
-
-    public void SetFlashlightIntensity(float intensity)
-    {
-        if (flashlightController != null)
-        {
-            flashlightController.SetLightIntensity(intensity);
-        }
-    }
-    */
 }

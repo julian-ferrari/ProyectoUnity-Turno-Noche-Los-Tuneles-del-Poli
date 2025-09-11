@@ -3641,6 +3641,35 @@ Material:
     - _SpecColor: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
+--- !u!1 &101142091 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7724012015448440187, guid: eabf8371e6ccae54db3c5cd9d94e1068, type: 3}
+  m_PrefabInstance: {fileID: 1919470445}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &101142095
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 101142091}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 629f7f3cfd999cd47a9823fa87f8a998, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  requiredKeyID: DefaultKey
+  isLocked: 0
+  isOpen: 0
+  doorPivot: {fileID: 0}
+  openAngle: 90
+  openSpeed: 2
+  openInward: 0
+  pivotOffset: {x: -0.5, y: 0, z: 0}
+  interactionRange: 3
+  lockedMessage: "La puerta est\xE1 cerrada. Necesitas una llave."
+  openMessage: Presiona E para abrir/cerrar
+  unlockMessage: "\xA1Puerta desbloqueada!"
 --- !u!21 &104208809
 Material:
   serializedVersion: 8
@@ -8900,6 +8929,35 @@ Material:
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
+--- !u!1 &232351331 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: -1591919356310587811, guid: eabf8371e6ccae54db3c5cd9d94e1068, type: 3}
+  m_PrefabInstance: {fileID: 1919470445}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &232351335
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 232351331}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 629f7f3cfd999cd47a9823fa87f8a998, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  requiredKeyID: DefaultKey
+  isLocked: 0
+  isOpen: 0
+  doorPivot: {fileID: 0}
+  openAngle: 90
+  openSpeed: 2
+  openInward: 0
+  pivotOffset: {x: -0.5, y: 0, z: 0}
+  interactionRange: 3
+  lockedMessage: "La puerta est\xE1 cerrada. Necesitas una llave."
+  openMessage: Presiona E para abrir/cerrar
+  unlockMessage: "\xA1Puerta desbloqueada!"
 --- !u!21 &232770736
 Material:
   serializedVersion: 8
@@ -10636,6 +10694,35 @@ Material:
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
+--- !u!1 &272646002 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: -7176390880087551958, guid: eabf8371e6ccae54db3c5cd9d94e1068, type: 3}
+  m_PrefabInstance: {fileID: 1919470445}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &272646006
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 272646002}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 629f7f3cfd999cd47a9823fa87f8a998, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  requiredKeyID: DefaultKey
+  isLocked: 0
+  isOpen: 0
+  doorPivot: {fileID: 0}
+  openAngle: 90
+  openSpeed: 2
+  openInward: 0
+  pivotOffset: {x: -0.5, y: 0, z: 0}
+  interactionRange: 3
+  lockedMessage: "La puerta est\xE1 cerrada. Necesitas una llave."
+  openMessage: Presiona E para abrir/cerrar
+  unlockMessage: "\xA1Puerta desbloqueada!"
 --- !u!21 &273468797
 Material:
   serializedVersion: 8
@@ -11504,6 +11591,35 @@ Material:
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
+--- !u!1 &290475178 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6168769723455090470, guid: eabf8371e6ccae54db3c5cd9d94e1068, type: 3}
+  m_PrefabInstance: {fileID: 1919470445}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &290475182
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 290475178}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 629f7f3cfd999cd47a9823fa87f8a998, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  requiredKeyID: DefaultKey
+  isLocked: 0
+  isOpen: 0
+  doorPivot: {fileID: 0}
+  openAngle: 90
+  openSpeed: 2
+  openInward: 0
+  pivotOffset: {x: -0.5, y: 0, z: 0}
+  interactionRange: 3
+  lockedMessage: "La puerta est\xE1 cerrada. Necesitas una llave."
+  openMessage: Presiona E para abrir/cerrar
+  unlockMessage: "\xA1Puerta desbloqueada!"
 --- !u!21 &293398193
 Material:
   serializedVersion: 8
@@ -20202,6 +20318,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1576426373}
+  - {fileID: 1028001657}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 30, y: 0, z: 0}
 --- !u!114 &438279227
@@ -20260,21 +20377,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8cf767b8048eb404f9bf7669712f4029, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  flashlightModelPrefab: {fileID: 5142405975479288625, guid: 4bf2559247725d642a97fd0ce1148890, type: 3}
-  flashlightInstance: {fileID: 0}
-  posicion: {x: 0.5, y: -0.3, z: 0.8}
-  rotacion: {x: 0, y: 270, z: 0}
-  escala: {x: 5, y: 5, z: 5}
-  mostrarSiempre: 1
-  intensidadLuz: 3
-  rangoLuz: 15
-  anguloSpot: 60
-  evitarTraspaso: 1
-  layerLinterna: FlashlightFPS
-  camara: {fileID: 0}
-  luzLinterna: {fileID: 0}
-  linternaVisible: 0
-  luzEncendida: 0
 --- !u!114 &438279229
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -42146,6 +42248,35 @@ Material:
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
+--- !u!1 &923288202 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5681166207855417202, guid: eabf8371e6ccae54db3c5cd9d94e1068, type: 3}
+  m_PrefabInstance: {fileID: 1919470445}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &923288206
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 923288202}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 629f7f3cfd999cd47a9823fa87f8a998, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  requiredKeyID: DefaultKey
+  isLocked: 0
+  isOpen: 0
+  doorPivot: {fileID: 0}
+  openAngle: 90
+  openSpeed: 2
+  openInward: 0
+  pivotOffset: {x: -0.5, y: 0, z: 0}
+  interactionRange: 3
+  lockedMessage: "La puerta est\xE1 cerrada. Necesitas una llave."
+  openMessage: Presiona E para abrir/cerrar
+  unlockMessage: "\xA1Puerta desbloqueada!"
 --- !u!21 &925828390
 Material:
   serializedVersion: 8
@@ -45064,6 +45195,35 @@ Material:
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
+--- !u!1 &1016313373 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 940045203262496798, guid: eabf8371e6ccae54db3c5cd9d94e1068, type: 3}
+  m_PrefabInstance: {fileID: 1919470445}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1016313377
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1016313373}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 629f7f3cfd999cd47a9823fa87f8a998, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  requiredKeyID: DefaultKey
+  isLocked: 0
+  isOpen: 0
+  doorPivot: {fileID: 0}
+  openAngle: 90
+  openSpeed: 2
+  openInward: 0
+  pivotOffset: {x: -0.5, y: 0, z: 0}
+  interactionRange: 3
+  lockedMessage: "La puerta est\xE1 cerrada. Necesitas una llave."
+  openMessage: Presiona E para abrir/cerrar
+  unlockMessage: "\xA1Puerta desbloqueada!"
 --- !u!21 &1021359076
 Material:
   serializedVersion: 8
@@ -45436,6 +45596,11 @@ Material:
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
+--- !u!4 &1028001657 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 5482761262137497995, guid: 4bf2559247725d642a97fd0ce1148890, type: 3}
+  m_PrefabInstance: {fileID: 1532343466}
+  m_PrefabAsset: {fileID: 0}
 --- !u!21 &1028533262
 Material:
   serializedVersion: 8
@@ -48199,13 +48364,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   requiredKeyID: DefaultKey
-  isLocked: 1
+  isLocked: 0
   isOpen: 0
   doorPivot: {fileID: 0}
   openAngle: 90
   openSpeed: 2
   openInward: 0
-  interactionRange: 3
+  pivotOffset: {x: -0.5, y: 0, z: 0}
+  interactionRange: 0.2
   lockedMessage: "La puerta est\xE1 cerrada. Necesitas una llave."
   openMessage: Presiona E para abrir/cerrar
   unlockMessage: "\xA1Puerta desbloqueada!"
@@ -55711,6 +55877,35 @@ Material:
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
+--- !u!1 &1251304815 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1136196138429621314, guid: eabf8371e6ccae54db3c5cd9d94e1068, type: 3}
+  m_PrefabInstance: {fileID: 1919470445}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1251304819
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1251304815}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 629f7f3cfd999cd47a9823fa87f8a998, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  requiredKeyID: DefaultKey
+  isLocked: 0
+  isOpen: 0
+  doorPivot: {fileID: 0}
+  openAngle: 90
+  openSpeed: 2
+  openInward: 0
+  pivotOffset: {x: -0.5, y: 0, z: 0}
+  interactionRange: 3
+  lockedMessage: "La puerta est\xE1 cerrada. Necesitas una llave."
+  openMessage: Presiona E para abrir/cerrar
+  unlockMessage: "\xA1Puerta desbloqueada!"
 --- !u!21 &1254963076
 Material:
   serializedVersion: 8
@@ -62269,6 +62464,35 @@ Material:
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
+--- !u!1 &1435570613 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3405196353013030472, guid: eabf8371e6ccae54db3c5cd9d94e1068, type: 3}
+  m_PrefabInstance: {fileID: 1919470445}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1435570617
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1435570613}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 629f7f3cfd999cd47a9823fa87f8a998, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  requiredKeyID: DefaultKey
+  isLocked: 0
+  isOpen: 0
+  doorPivot: {fileID: 0}
+  openAngle: 90
+  openSpeed: 2
+  openInward: 0
+  pivotOffset: {x: -0.5, y: 0, z: 0}
+  interactionRange: 3
+  lockedMessage: "La puerta est\xE1 cerrada. Necesitas una llave."
+  openMessage: Presiona E para abrir/cerrar
+  unlockMessage: "\xA1Puerta desbloqueada!"
 --- !u!21 &1436252006
 Material:
   serializedVersion: 8
@@ -63757,6 +63981,35 @@ Material:
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
+--- !u!1 &1458348466 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4469801836337046441, guid: eabf8371e6ccae54db3c5cd9d94e1068, type: 3}
+  m_PrefabInstance: {fileID: 1919470445}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1458348470
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1458348466}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 629f7f3cfd999cd47a9823fa87f8a998, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  requiredKeyID: DefaultKey
+  isLocked: 0
+  isOpen: 0
+  doorPivot: {fileID: 0}
+  openAngle: 90
+  openSpeed: 2
+  openInward: 0
+  pivotOffset: {x: -0.5, y: 0, z: 0}
+  interactionRange: 3
+  lockedMessage: "La puerta est\xE1 cerrada. Necesitas una llave."
+  openMessage: Presiona E para abrir/cerrar
+  unlockMessage: "\xA1Puerta desbloqueada!"
 --- !u!21 &1460261536
 Material:
   serializedVersion: 8
@@ -64005,6 +64258,35 @@ Material:
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
+--- !u!1 &1463028693 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: -2443949492411639238, guid: eabf8371e6ccae54db3c5cd9d94e1068, type: 3}
+  m_PrefabInstance: {fileID: 1919470445}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1463028697
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1463028693}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 629f7f3cfd999cd47a9823fa87f8a998, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  requiredKeyID: DefaultKey
+  isLocked: 0
+  isOpen: 0
+  doorPivot: {fileID: 0}
+  openAngle: 90
+  openSpeed: 2
+  openInward: 0
+  pivotOffset: {x: -0.5, y: 0, z: 0}
+  interactionRange: 3
+  lockedMessage: "La puerta est\xE1 cerrada. Necesitas una llave."
+  openMessage: Presiona E para abrir/cerrar
+  unlockMessage: "\xA1Puerta desbloqueada!"
 --- !u!21 &1463310571
 Material:
   serializedVersion: 8
@@ -65865,6 +66147,35 @@ Material:
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
+--- !u!1 &1507214149 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: -1082015079779138809, guid: eabf8371e6ccae54db3c5cd9d94e1068, type: 3}
+  m_PrefabInstance: {fileID: 1919470445}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1507214153
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1507214149}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 629f7f3cfd999cd47a9823fa87f8a998, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  requiredKeyID: DefaultKey
+  isLocked: 0
+  isOpen: 0
+  doorPivot: {fileID: 0}
+  openAngle: 90
+  openSpeed: 2
+  openInward: 0
+  pivotOffset: {x: -0.5, y: 0, z: 0}
+  interactionRange: 3
+  lockedMessage: "La puerta est\xE1 cerrada. Necesitas una llave."
+  openMessage: Presiona E para abrir/cerrar
+  unlockMessage: "\xA1Puerta desbloqueada!"
 --- !u!21 &1508158171
 Material:
   serializedVersion: 8
@@ -66502,6 +66813,63 @@ Material:
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
+--- !u!1001 &1532343466
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 438279226}
+    m_Modifications:
+    - target: {fileID: 5142405975479288625, guid: 4bf2559247725d642a97fd0ce1148890, type: 3}
+      propertyPath: m_Name
+      value: LINTERNAFBX
+      objectReference: {fileID: 0}
+    - target: {fileID: 5482761262137497995, guid: 4bf2559247725d642a97fd0ce1148890, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5482761262137497995, guid: 4bf2559247725d642a97fd0ce1148890, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -5.319885
+      objectReference: {fileID: 0}
+    - target: {fileID: 5482761262137497995, guid: 4bf2559247725d642a97fd0ce1148890, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -0.8422699
+      objectReference: {fileID: 0}
+    - target: {fileID: 5482761262137497995, guid: 4bf2559247725d642a97fd0ce1148890, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 5482761262137497995, guid: 4bf2559247725d642a97fd0ce1148890, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 5482761262137497995, guid: 4bf2559247725d642a97fd0ce1148890, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5482761262137497995, guid: 4bf2559247725d642a97fd0ce1148890, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5482761262137497995, guid: 4bf2559247725d642a97fd0ce1148890, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5482761262137497995, guid: 4bf2559247725d642a97fd0ce1148890, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5482761262137497995, guid: 4bf2559247725d642a97fd0ce1148890, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 4bf2559247725d642a97fd0ce1148890, type: 3}
 --- !u!21 &1536818150
 Material:
   serializedVersion: 8
@@ -73658,6 +74026,35 @@ Material:
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
+--- !u!1 &1697199074 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 2931228549035650504, guid: eabf8371e6ccae54db3c5cd9d94e1068, type: 3}
+  m_PrefabInstance: {fileID: 1919470445}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1697199078
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1697199074}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 629f7f3cfd999cd47a9823fa87f8a998, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  requiredKeyID: DefaultKey
+  isLocked: 0
+  isOpen: 0
+  doorPivot: {fileID: 0}
+  openAngle: 90
+  openSpeed: 2
+  openInward: 0
+  pivotOffset: {x: -0.5, y: 0, z: 0}
+  interactionRange: 3
+  lockedMessage: "La puerta est\xE1 cerrada. Necesitas una llave."
+  openMessage: Presiona E para abrir/cerrar
+  unlockMessage: "\xA1Puerta desbloqueada!"
 --- !u!21 &1707672607
 Material:
   serializedVersion: 8
@@ -76262,6 +76659,35 @@ Material:
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
+--- !u!1 &1778682108 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 29262676176984326, guid: eabf8371e6ccae54db3c5cd9d94e1068, type: 3}
+  m_PrefabInstance: {fileID: 1919470445}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1778682112
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1778682108}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 629f7f3cfd999cd47a9823fa87f8a998, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  requiredKeyID: DefaultKey
+  isLocked: 0
+  isOpen: 0
+  doorPivot: {fileID: 0}
+  openAngle: 90
+  openSpeed: 2
+  openInward: 0
+  pivotOffset: {x: -0.5, y: 0, z: 0}
+  interactionRange: 3
+  lockedMessage: "La puerta est\xE1 cerrada. Necesitas una llave."
+  openMessage: Presiona E para abrir/cerrar
+  unlockMessage: "\xA1Puerta desbloqueada!"
 --- !u!21 &1778875263
 Material:
   serializedVersion: 8
@@ -77340,6 +77766,35 @@ Material:
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
+--- !u!1 &1794823997 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8828887092292142307, guid: eabf8371e6ccae54db3c5cd9d94e1068, type: 3}
+  m_PrefabInstance: {fileID: 1919470445}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1794824001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1794823997}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 629f7f3cfd999cd47a9823fa87f8a998, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  requiredKeyID: DefaultKey
+  isLocked: 0
+  isOpen: 0
+  doorPivot: {fileID: 0}
+  openAngle: 90
+  openSpeed: 2
+  openInward: 0
+  pivotOffset: {x: -0.5, y: 0, z: 0}
+  interactionRange: 3
+  lockedMessage: "La puerta est\xE1 cerrada. Necesitas una llave."
+  openMessage: Presiona E para abrir/cerrar
+  unlockMessage: "\xA1Puerta desbloqueada!"
 --- !u!21 &1799441388
 Material:
   serializedVersion: 8
@@ -82722,17 +83177,11 @@ MonoBehaviour:
   runSpeed: 6
   crouchSpeed: 1.5
   jumpForce: 5
-  maxStepHeight: 1000
-  stepCheckDistance: 1
-  stepMask:
-    serializedVersion: 2
-    m_Bits: 64
   playerCamera: {fileID: 0}
   mouseSensitivity: 8
   upDownRange: 60
   normalCameraHeight: 0.8
   crouchCameraHeight: 0.4
-  groundCheck: {fileID: 889593560}
   groundDistance: 0.4
   groundMask:
     serializedVersion: 2
@@ -82741,6 +83190,7 @@ MonoBehaviour:
   keys: []
   maxKeys: 4
   currentInteractionMessage: 
+  flashlight: {fileID: 1576426374}
 --- !u!114 &1899699430
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -83264,6 +83714,35 @@ Material:
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
+--- !u!1 &1914604059 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: -509159531975952239, guid: eabf8371e6ccae54db3c5cd9d94e1068, type: 3}
+  m_PrefabInstance: {fileID: 1919470445}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1914604063
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1914604059}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 629f7f3cfd999cd47a9823fa87f8a998, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  requiredKeyID: DefaultKey
+  isLocked: 0
+  isOpen: 0
+  doorPivot: {fileID: 0}
+  openAngle: 90
+  openSpeed: 2
+  openInward: 0
+  pivotOffset: {x: -0.5, y: 0, z: 0}
+  interactionRange: 3
+  lockedMessage: "La puerta est\xE1 cerrada. Necesitas una llave."
+  openMessage: Presiona E para abrir/cerrar
+  unlockMessage: "\xA1Puerta desbloqueada!"
 --- !u!21 &1918336475
 Material:
   serializedVersion: 8
@@ -87583,9 +88062,57 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: eabf8371e6ccae54db3c5cd9d94e1068, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1919470450}
+    - targetCorrespondingSourceObject: {fileID: -509159531975952239, guid: eabf8371e6ccae54db3c5cd9d94e1068, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1914604063}
+    - targetCorrespondingSourceObject: {fileID: 940045203262496798, guid: eabf8371e6ccae54db3c5cd9d94e1068, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1016313377}
+    - targetCorrespondingSourceObject: {fileID: -2443949492411639238, guid: eabf8371e6ccae54db3c5cd9d94e1068, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1463028697}
+    - targetCorrespondingSourceObject: {fileID: -1557052012533666132, guid: eabf8371e6ccae54db3c5cd9d94e1068, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2075033957}
+    - targetCorrespondingSourceObject: {fileID: 29262676176984326, guid: eabf8371e6ccae54db3c5cd9d94e1068, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1778682112}
+    - targetCorrespondingSourceObject: {fileID: -1082015079779138809, guid: eabf8371e6ccae54db3c5cd9d94e1068, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1507214153}
+    - targetCorrespondingSourceObject: {fileID: 2931228549035650504, guid: eabf8371e6ccae54db3c5cd9d94e1068, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1697199078}
+    - targetCorrespondingSourceObject: {fileID: -7176390880087551958, guid: eabf8371e6ccae54db3c5cd9d94e1068, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 272646006}
+    - targetCorrespondingSourceObject: {fileID: 4469801836337046441, guid: eabf8371e6ccae54db3c5cd9d94e1068, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1458348470}
+    - targetCorrespondingSourceObject: {fileID: 8828887092292142307, guid: eabf8371e6ccae54db3c5cd9d94e1068, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1794824001}
+    - targetCorrespondingSourceObject: {fileID: 5681166207855417202, guid: eabf8371e6ccae54db3c5cd9d94e1068, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 923288206}
+    - targetCorrespondingSourceObject: {fileID: -1591919356310587811, guid: eabf8371e6ccae54db3c5cd9d94e1068, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 232351335}
     - targetCorrespondingSourceObject: {fileID: 6424544412878870112, guid: eabf8371e6ccae54db3c5cd9d94e1068, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1078370223}
+    - targetCorrespondingSourceObject: {fileID: 1136196138429621314, guid: eabf8371e6ccae54db3c5cd9d94e1068, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1251304819}
+    - targetCorrespondingSourceObject: {fileID: 7724012015448440187, guid: eabf8371e6ccae54db3c5cd9d94e1068, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 101142095}
+    - targetCorrespondingSourceObject: {fileID: 6168769723455090470, guid: eabf8371e6ccae54db3c5cd9d94e1068, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 290475182}
+    - targetCorrespondingSourceObject: {fileID: 3405196353013030472, guid: eabf8371e6ccae54db3c5cd9d94e1068, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1435570617}
   m_SourcePrefab: {fileID: 100100000, guid: eabf8371e6ccae54db3c5cd9d94e1068, type: 3}
 --- !u!1 &1919470446 stripped
 GameObject:
@@ -95328,6 +95855,35 @@ Material:
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
+--- !u!1 &2075033953 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: -1557052012533666132, guid: eabf8371e6ccae54db3c5cd9d94e1068, type: 3}
+  m_PrefabInstance: {fileID: 1919470445}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2075033957
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2075033953}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 629f7f3cfd999cd47a9823fa87f8a998, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  requiredKeyID: DefaultKey
+  isLocked: 0
+  isOpen: 0
+  doorPivot: {fileID: 0}
+  openAngle: 90
+  openSpeed: 2
+  openInward: 0
+  pivotOffset: {x: -0.5, y: 0, z: 0}
+  interactionRange: 3
+  lockedMessage: "La puerta est\xE1 cerrada. Necesitas una llave."
+  openMessage: Presiona E para abrir/cerrar
+  unlockMessage: "\xA1Puerta desbloqueada!"
 --- !u!21 &2075826935
 Material:
   serializedVersion: 8
@@ -96235,6 +96791,7 @@ MonoBehaviour:
   openAngle: 90
   openSpeed: 2
   openInward: 0
+  pivotOffset: {x: -0.5, y: 0, z: 0}
   interactionRange: 3
   lockedMessage: "La puerta est\xE1 cerrada. Necesitas una llave."
   openMessage: Presiona E para abrir/cerrar

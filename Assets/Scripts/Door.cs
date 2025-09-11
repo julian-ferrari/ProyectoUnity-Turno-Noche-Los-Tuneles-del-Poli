@@ -3,43 +3,79 @@ using UnityEngine;
 public class Door : MonoBehaviour
 {
     [Header("Door Settings")]
-    public string requiredKeyID = "DefaultKey"; // ID de la llave necesaria
+    public string requiredKeyID = "DefaultKey";
     public bool isLocked = true;
     public bool isOpen = false;
 
     [Header("Door Animation")]
-    public Transform doorPivot; // El objeto que rotará (puede ser la misma puerta)
+    public Transform doorPivot; // Arrastra aquí la puerta
     public float openAngle = 90f;
     public float openSpeed = 2f;
-    public bool openInward = false; // Si se abre hacia adentro o afuera
+    public bool openInward = false;
+
+    [Header("Manual Pivot Setup")]
+    [Tooltip("Ajusta estos valores si la puerta se posiciona mal")]
+    public Vector3 pivotOffset = new Vector3(-0.5f, 0, 0); // Donde están las bisagras
 
     [Header("Interaction")]
-    public float interactionRange = 3f;
+    public float interactionRange = 1.5f;
     public string lockedMessage = "La puerta está cerrada. Necesitas una llave.";
     public string openMessage = "Presiona E para abrir/cerrar";
     public string unlockMessage = "¡Puerta desbloqueada!";
 
-    private Quaternion closedRotation;
-    private Quaternion openRotation;
+    private Vector3 originalPosition;
+    private Quaternion originalRotation;
+    private Vector3 pivotWorldPosition;
     private bool isAnimating = false;
     private PlayerController nearbyPlayer;
 
     void Start()
     {
-        // Configurar rotaciones
         if (doorPivot == null)
             doorPivot = transform;
 
-        closedRotation = doorPivot.rotation;
+        // Guardar estado original
+        originalPosition = doorPivot.position;
+        originalRotation = doorPivot.rotation;
 
-        float finalAngle = openInward ? -openAngle : openAngle;
-        openRotation = closedRotation * Quaternion.Euler(0, 0, finalAngle);
+        // Auto-detectar pivot basado en el bounds del objeto
+        AutoDetectPivot();
 
-        // Configurar trigger
+        // Calcular posición del pivot en coordenadas del mundo
+        pivotWorldPosition = doorPivot.TransformPoint(pivotOffset);
+
+        SetupTrigger();
+
+        Debug.Log($"Puerta configurada - Pivot en: {pivotWorldPosition}");
+    }
+
+    void AutoDetectPivot()
+    {
+        if (doorPivot != null)
+        {
+            Renderer rend = doorPivot.GetComponent<Renderer>();
+            if (rend != null)
+            {
+                Bounds bounds = rend.bounds;
+
+                // Convertir bounds a espacio local
+                Vector3 localMin = doorPivot.InverseTransformPoint(bounds.min);
+                Vector3 localMax = doorPivot.InverseTransformPoint(bounds.max);
+
+                // Determinar qué lado es más cercano al centro para el pivot
+                // Por defecto usamos el lado izquierdo (menor X)
+                pivotOffset = new Vector3(localMin.x, 0, 0);
+
+                Debug.Log($"Pivot auto-detectado: {pivotOffset}");
+            }
+        }
+    }
+
+    void SetupTrigger()
+    {
         Collider col = GetComponent<Collider>();
         if (col != null && !col.isTrigger)
         {
-            // Crear un trigger adicional para detección
             GameObject trigger = new GameObject("DoorTrigger");
             trigger.transform.SetParent(transform);
             trigger.transform.localPosition = Vector3.zero;
@@ -50,22 +86,6 @@ public class Door : MonoBehaviour
 
             DoorTrigger doorTrigger = trigger.AddComponent<DoorTrigger>();
             doorTrigger.parentDoor = this;
-        }
-    }
-
-    void Update()
-    {
-        // Animar puerta
-        if (isAnimating)
-        {
-            Quaternion targetRotation = isOpen ? openRotation : closedRotation;
-            doorPivot.rotation = Quaternion.Slerp(doorPivot.rotation, targetRotation, openSpeed * Time.deltaTime);
-
-            if (Quaternion.Angle(doorPivot.rotation, targetRotation) < 1f)
-            {
-                doorPivot.rotation = targetRotation;
-                isAnimating = false;
-            }
         }
     }
 
@@ -93,7 +113,6 @@ public class Door : MonoBehaviour
     {
         if (isLocked)
         {
-            // Intentar usar llave
             if (player.HasKey(requiredKeyID))
             {
                 UnlockDoor(player);
@@ -106,7 +125,6 @@ public class Door : MonoBehaviour
         }
         else
         {
-            // Abrir/cerrar puerta
             ToggleDoor();
         }
     }
@@ -114,12 +132,11 @@ public class Door : MonoBehaviour
     void UnlockDoor(PlayerController player)
     {
         isLocked = false;
-        player.UseKey(requiredKeyID); // Opcional: consumir la llave
+        player.UseKey(requiredKeyID);
         player.ShowInteractionMessage(unlockMessage);
 
         Debug.Log("¡Puerta desbloqueada con " + requiredKeyID + "!");
 
-        // Auto-abrir después de desbloquear
         Invoke("ToggleDoor", 0.5f);
     }
 
@@ -128,21 +145,156 @@ public class Door : MonoBehaviour
         if (!isAnimating)
         {
             isOpen = !isOpen;
-            isAnimating = true;
-
-            Debug.Log("Puerta " + (isOpen ? "abierta" : "cerrada"));
+            StartCoroutine(AnimateDoor());
         }
+    }
+
+    // MÉTODO CORREGIDO - SIN ACUMULACIÓN DE ROTACIONES
+    System.Collections.IEnumerator AnimateDoor()
+    {
+        isAnimating = true;
+
+        float startAngle = isOpen ? 0f : openAngle * (openInward ? -1f : 1f);
+        float endAngle = isOpen ? openAngle * (openInward ? -1f : 1f) : 0f;
+
+        float elapsedTime = 0f;
+        float duration = 1f / openSpeed;
+
+        while (elapsedTime < duration)
+        {
+            elapsedTime += Time.deltaTime;
+            float t = Mathf.SmoothStep(0f, 1f, elapsedTime / duration);
+
+            // Calcular el ángulo actual sin acumulación
+            float currentAngle = Mathf.Lerp(startAngle, endAngle, t);
+
+            // Aplicar la rotación desde la posición original
+            ApplyDoorRotation(currentAngle);
+
+            yield return null;
+        }
+
+        // Aplicar rotación final
+        ApplyDoorRotation(endAngle);
+
+        isAnimating = false;
+        Debug.Log("Puerta " + (isOpen ? "abierta" : "cerrada") + " - Ángulo: " + endAngle);
+    }
+
+    void ApplyDoorRotation(float angle)
+    {
+        // Resetear a posición y rotación original
+        doorPivot.position = originalPosition;
+        doorPivot.rotation = originalRotation;
+
+        // Aplicar rotación alrededor del pivot
+        doorPivot.RotateAround(pivotWorldPosition, Vector3.up, angle);
     }
 
     void OnDrawGizmosSelected()
     {
+        Transform pivot = doorPivot != null ? doorPivot : transform;
+
         // Mostrar rango de interacción
         Gizmos.color = Color.green;
         Gizmos.DrawWireCube(transform.position, new Vector3(interactionRange, 2f, interactionRange));
 
+        // Mostrar punto de pivot
+        Vector3 pivotPos = Application.isPlaying ? pivotWorldPosition : pivot.TransformPoint(pivotOffset);
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawSphere(pivotPos, 0.15f);
+
         // Mostrar dirección de apertura
         Gizmos.color = isOpen ? Color.red : Color.blue;
-        Vector3 direction = transform.right * (openInward ? -1 : 1);
-        Gizmos.DrawRay(transform.position, direction * 2f);
+        Vector3 direction = pivot.right * (openInward ? -1 : 1);
+        Gizmos.DrawRay(pivot.position, direction * 2f);
+
+        // Mostrar línea del pivot
+        Gizmos.color = Color.cyan;
+        Gizmos.DrawLine(pivot.position, pivotPos);
+    }
+
+    // MÉTODOS PARA CONFIGURAR PIVOT FÁCILMENTE
+    [ContextMenu("Auto-detectar Pivot Izquierdo")]
+    void SetPivotLeft()
+    {
+        if (doorPivot != null)
+        {
+            Renderer rend = doorPivot.GetComponent<Renderer>();
+            if (rend != null)
+            {
+                Bounds bounds = rend.bounds;
+                Vector3 localBounds = doorPivot.InverseTransformPoint(bounds.min);
+                pivotOffset = new Vector3(localBounds.x, 0, 0);
+                Debug.Log("Pivot configurado a la izquierda: " + pivotOffset);
+
+                // Recalcular pivot world position
+                if (Application.isPlaying)
+                {
+                    pivotWorldPosition = doorPivot.TransformPoint(pivotOffset);
+                }
+            }
+        }
+    }
+
+    [ContextMenu("Auto-detectar Pivot Derecho")]
+    void SetPivotRight()
+    {
+        if (doorPivot != null)
+        {
+            Renderer rend = doorPivot.GetComponent<Renderer>();
+            if (rend != null)
+            {
+                Bounds bounds = rend.bounds;
+                Vector3 localBounds = doorPivot.InverseTransformPoint(bounds.max);
+                pivotOffset = new Vector3(localBounds.x, 0, 0);
+                Debug.Log("Pivot configurado a la derecha: " + pivotOffset);
+
+                // Recalcular pivot world position
+                if (Application.isPlaying)
+                {
+                    pivotWorldPosition = doorPivot.TransformPoint(pivotOffset);
+                }
+            }
+        }
+    }
+
+    [ContextMenu("Resetear Puerta")]
+    void ResetDoor()
+    {
+        if (Application.isPlaying)
+        {
+            doorPivot.position = originalPosition;
+            doorPivot.rotation = originalRotation;
+            isOpen = false;
+            isAnimating = false;
+            Debug.Log("Puerta reseteada a posición original");
+        }
+    }
+
+    [ContextMenu("Reconfigurar Trigger")]
+    void ReconfigureTrigger()
+    {
+        SetupTrigger();
+        Debug.Log($"Trigger reconfigurado con rango: {interactionRange}");
+    }
+
+    [ContextMenu("Debug Info")]
+    void DebugInfo()
+    {
+        Transform triggerChild = transform.Find("DoorTrigger");
+        if (triggerChild != null)
+        {
+            BoxCollider triggerCol = triggerChild.GetComponent<BoxCollider>();
+            if (triggerCol != null)
+            {
+                Debug.Log($"Trigger actual - Size: {triggerCol.size}, IsTrigger: {triggerCol.isTrigger}");
+            }
+        }
+        else
+        {
+            Debug.Log("No se encontró DoorTrigger child object");
+        }
+        Debug.Log($"InteractionRange configurado: {interactionRange}");
     }
 }
