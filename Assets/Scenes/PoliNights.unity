@@ -83186,6 +83186,7 @@ MonoBehaviour:
   groundMask:
     serializedVersion: 2
     m_Bits: 0
+  groundCheckPoint: {fileID: 0}
   currentNoiseLevel: 0
   keys: []
   maxKeys: 4
@@ -85007,6 +85008,10 @@ PrefabInstance:
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
       objectReference: {fileID: 1661654087}
+    - target: {fileID: -4354582580588837786, guid: eabf8371e6ccae54db3c5cd9d94e1068, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 40.55
+      objectReference: {fileID: 0}
     - target: {fileID: -4351268883958870334, guid: eabf8371e6ccae54db3c5cd9d94e1068, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 

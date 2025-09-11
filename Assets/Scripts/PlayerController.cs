@@ -7,7 +7,7 @@ public class PlayerController : MonoBehaviour
     public float walkSpeed = 3f;
     public float runSpeed = 6f;
     public float crouchSpeed = 1.5f;
-    public float jumpForce = 5f;
+    public float jumpForce = 8f; // Aumentado para mejor salto
 
     [Header("Camera")]
     public Camera playerCamera;
@@ -17,8 +17,9 @@ public class PlayerController : MonoBehaviour
     public float crouchCameraHeight = 0.6f;
 
     [Header("Ground Check")]
-    public float groundDistance = 0.4f;
+    public float groundDistance = 0.2f; // Reducido para mejor detección
     public LayerMask groundMask = 1;
+    public Transform groundCheckPoint; // Punto específico para revisar suelo
 
     [Header("Stealth")]
     public float currentNoiseLevel = 0f;
@@ -69,17 +70,19 @@ public class PlayerController : MonoBehaviour
             originalColliderCenter = playerCollider.center;
         }
 
-        // Rigidbody setup SIMPLE
+        // Rigidbody setup MEJORADO
         if (rb != null)
         {
             rb.constraints = RigidbodyConstraints.FreezeRotationX |
                             RigidbodyConstraints.FreezeRotationY |
                             RigidbodyConstraints.FreezeRotationZ;
+            rb.mass = 1f; // Masa estándar
         }
 
         // Camera setup
         SetupCamera();
         SetupFlashlight();
+        SetupGroundCheck();
 
         // Cursor setup
         Cursor.lockState = CursorLockMode.Locked;
@@ -88,6 +91,18 @@ public class PlayerController : MonoBehaviour
         // Initialize camera height
         targetCameraHeight = normalCameraHeight;
         currentCameraHeight = normalCameraHeight;
+    }
+
+    void SetupGroundCheck()
+    {
+        // Crear punto de verificación de suelo si no existe
+        if (groundCheckPoint == null)
+        {
+            GameObject groundCheckObj = new GameObject("GroundCheckPoint");
+            groundCheckObj.transform.SetParent(transform);
+            groundCheckObj.transform.localPosition = new Vector3(0, -playerCollider.height / 2f + 0.1f, 0);
+            groundCheckPoint = groundCheckObj.transform;
+        }
     }
 
     void SetupCamera()
@@ -181,8 +196,8 @@ public class PlayerController : MonoBehaviour
 
     void HandleInput()
     {
-        // Jump
-        if (Input.GetKeyDown(KeyCode.Space) && isGrounded)
+        // Jump - MEJORADO
+        if (Input.GetKeyDown(KeyCode.Space) && isGrounded && !isCrouched)
         {
             HandleJump();
         }
@@ -281,17 +296,38 @@ public class PlayerController : MonoBehaviour
 
     void CheckGrounded()
     {
-        // Check si está en el suelo
-        Vector3 rayStart = transform.position + Vector3.up * 0.1f;
-        isGrounded = Physics.Raycast(rayStart, Vector3.down, 1.5f, groundMask);
+        // MÉTODO MEJORADO de detección de suelo
+        if (groundCheckPoint != null)
+        {
+            // Usar el punto específico para revisar
+            isGrounded = Physics.CheckSphere(groundCheckPoint.position, groundDistance, groundMask);
 
-        Debug.DrawRay(rayStart, Vector3.down * 1.5f, isGrounded ? Color.green : Color.red);
+            // Debug visual
+            Debug.DrawLine(groundCheckPoint.position, groundCheckPoint.position + Vector3.down * groundDistance,
+                          isGrounded ? Color.green : Color.red);
+        }
+        else
+        {
+            // Fallback al método anterior
+            Vector3 rayStart = transform.position + Vector3.up * 0.1f;
+            isGrounded = Physics.Raycast(rayStart, Vector3.down, 1.2f, groundMask);
+            Debug.DrawRay(rayStart, Vector3.down * 1.2f, isGrounded ? Color.green : Color.red);
+        }
     }
 
     void HandleJump()
     {
-        rb.linearVelocity = new Vector3(rb.linearVelocity.x, jumpForce, rb.linearVelocity.z);
+        // SALTO MEJORADO - Resetear velocidad Y antes de aplicar fuerza
+        Vector3 currentVelocity = rb.linearVelocity;
+        rb.linearVelocity = new Vector3(currentVelocity.x, 0f, currentVelocity.z);
+
+        // Aplicar fuerza de salto
+        rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+
+        // Efectos adicionales
         currentNoiseLevel = 2f;
+
+        Debug.Log($"¡SALTANDO! Fuerza aplicada: {jumpForce}, isGrounded: {isGrounded}");
     }
 
     void HandleCrouch()
@@ -321,7 +357,6 @@ public class PlayerController : MonoBehaviour
 
         Debug.Log("Crouch: " + isCrouched);
     }
-
 
     void ToggleFlashlight()
     {
