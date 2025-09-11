@@ -11,8 +11,8 @@ public class PlayerController : MonoBehaviour
     public float jumpForce = 5f;
 
     [Header("Step Climbing")]
-    public float maxStepHeight = 0.25f;  // ✅ AJUSTADO: Valor más realista
-    public float stepCheckDistance = 0.4f;  // ✅ AJUSTADO: Más distancia para detectar
+    public float maxStepHeight = 0.25f;
+    public float stepCheckDistance = 0.4f;
     public LayerMask stepMask = 1;
 
     [Header("Camera")]
@@ -20,7 +20,7 @@ public class PlayerController : MonoBehaviour
     public float mouseSensitivity = 2f;
     public float upDownRange = 60f;
     public float normalCameraHeight = 0.8f;
-    public float crouchCameraHeight = 0.6f;  // ✅ Altura al agacharse menos extrema
+    public float crouchCameraHeight = 0.6f;
 
     [Header("Ground Check")]
     public Transform groundCheck;
@@ -43,6 +43,7 @@ public class PlayerController : MonoBehaviour
     // Components
     private Rigidbody rb;
     private CapsuleCollider playerCollider;
+    private FlashlightFPSController flashlightController; // ✅ Nueva referencia
 
     // State variables
     private bool isCrouched = false;
@@ -55,7 +56,7 @@ public class PlayerController : MonoBehaviour
     private float targetCameraHeight;
     private float currentCameraHeight;
 
-    // ✅ COLLIDER ORIGINAL - Variables bien declaradas
+    // Collider original variables
     private float originalColliderHeight;
     private Vector3 originalColliderCenter;
 
@@ -70,7 +71,7 @@ public class PlayerController : MonoBehaviour
         playerCollider = GetComponent<CapsuleCollider>();
         currentSpeed = walkSpeed;
 
-        // ✅ GUARDAR configuración original del collider ANTES de usarla
+        // Guardar configuración original del collider
         if (playerCollider != null)
         {
             originalColliderHeight = playerCollider.height;
@@ -98,6 +99,9 @@ public class PlayerController : MonoBehaviour
 
         // Camera setup
         SetupCamera();
+
+        // ✅ Configurar linterna FPS después de la cámara
+        SetupFlashlight();
 
         // Cursor setup
         Cursor.lockState = CursorLockMode.Locked;
@@ -147,13 +151,34 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    // ✅ NUEVO: Configurar sistema de linterna FPS
+    void SetupFlashlight()
+    {
+        if (playerCamera != null)
+        {
+            // Buscar si ya existe el componente
+            flashlightController = playerCamera.GetComponent<FlashlightFPSController>();
+
+            // Si no existe, agregarlo
+            if (flashlightController == null)
+            {
+                flashlightController = playerCamera.gameObject.AddComponent<FlashlightFPSController>();
+                Debug.Log("FlashlightFPSController agregado a la cámara");
+            }
+        }
+        else
+        {
+            Debug.LogError("No se puede configurar linterna: cámara no encontrada");
+        }
+    }
+
     void Update()
     {
         HandleMovement();
         HandleJump();
         HandleCrouch();
         HandleMouseLook();
-        HandleFlashlight();
+        HandleFlashlight(); // ✅ Mantener por compatibilidad, pero ahora usa el nuevo sistema
         HandleInteraction();
         UpdateInteractionMessage();
         UpdateCameraHeight();
@@ -184,7 +209,6 @@ public class PlayerController : MonoBehaviour
 
         isGrounded = centerHit || frontHit || backHit || rightHit || leftHit;
 
-        // Debug rays (optional)
         Debug.DrawRay(rayStart, Vector3.down * 1.2f, isGrounded ? Color.green : Color.red);
     }
 
@@ -242,29 +266,22 @@ public class PlayerController : MonoBehaviour
         float colliderHeight = playerCollider != null ? playerCollider.height : 1.8f;
 
         Vector3 rayDirection = movement.normalized;
-
-        // 1. Raycast al frente para detectar obstáculo
         Vector3 origin = transform.position + Vector3.up * 0.1f;
+
         if (!Physics.Raycast(origin, rayDirection, out RaycastHit frontHit, stepCheckDistance, stepMask))
             return movement;
 
-        // 2. Revisar el suelo justo después del obstáculo
         Vector3 stepCheckOrigin = frontHit.point + Vector3.up * maxStepHeight + rayDirection * 0.05f;
         if (!Physics.Raycast(stepCheckOrigin, Vector3.down, out RaycastHit stepHit, maxStepHeight + 0.3f, groundMask))
             return movement;
 
         float stepHeight = stepHit.point.y - transform.position.y;
 
-        // 3. Si la altura del "escalón" está dentro del rango
         if (stepHeight > 0.05f && stepHeight <= maxStepHeight)
         {
-            // ✅ Subida de escalón independiente de la velocidad de caminar/correr
-            float climbSpeed = 12f; // siempre rápido, podés subirlo a 15f si querés más "instantáneo"
-
+            float climbSpeed = 12f;
             Vector3 targetPos = new Vector3(rb.position.x, stepHit.point.y, rb.position.z);
             rb.position = Vector3.Lerp(rb.position, targetPos, Time.deltaTime * climbSpeed);
-
-            // Mantener el movimiento hacia adelante sin modificar
             return movement;
         }
 
@@ -280,15 +297,12 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-
     void HandleMouseLook()
     {
         mouseInput = Mouse.current.delta.ReadValue() * mouseSensitivity * 0.02f;
 
-        // Horizontal rotation - rotate player
         transform.Rotate(0, mouseInput.x, 0);
 
-        // Vertical rotation - rotate camera holder
         verticalRotation -= mouseInput.y;
         verticalRotation = Mathf.Clamp(verticalRotation, -upDownRange, upDownRange);
 
@@ -304,16 +318,13 @@ public class PlayerController : MonoBehaviour
         {
             isCrouched = !isCrouched;
 
-            // ✅ AGACHARSE ARREGLADO - Solo cambiar altura de cámara
             if (isCrouched)
             {
                 targetCameraHeight = crouchCameraHeight;
 
-                // ✅ CAMBIO SUTIL del collider para agacharse
                 if (playerCollider != null)
                 {
-                    playerCollider.height = originalColliderHeight * 0.7f; // Reducir a 70%
-                    // Mantener los pies en el suelo
+                    playerCollider.height = originalColliderHeight * 0.7f;
                     playerCollider.center = new Vector3(originalColliderCenter.x,
                                                        originalColliderCenter.y * 0.7f,
                                                        originalColliderCenter.z);
@@ -323,7 +334,6 @@ public class PlayerController : MonoBehaviour
             {
                 targetCameraHeight = normalCameraHeight;
 
-                // ✅ RESTAURAR collider original EXACTO
                 if (playerCollider != null)
                 {
                     playerCollider.height = originalColliderHeight;
@@ -335,33 +345,50 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    // ✅ MODIFICADO: Ahora usa el nuevo sistema de linterna
     void HandleFlashlight()
     {
         if (Keyboard.current.fKey.wasPressedThisFrame)
         {
-            Light flashlight = GetComponentInChildren<Light>();
-
-            if (flashlight == null && playerCamera != null)
+            if (flashlightController != null)
             {
-                GameObject flashlightObj = new GameObject("Flashlight");
-                flashlightObj.transform.SetParent(playerCamera.transform);
-                flashlightObj.transform.localPosition = Vector3.zero;
-                flashlightObj.transform.localRotation = Quaternion.identity;
-
-                flashlight = flashlightObj.AddComponent<Light>();
-                flashlight.type = LightType.Spot;
-                flashlight.range = 10f;
-                flashlight.spotAngle = 45f;
-                flashlight.intensity = 2f;
-                flashlight.color = Color.white;
-                flashlight.enabled = false;
+                // Usar el nuevo sistema
+                flashlightController.ToggleFlashlight();
             }
-
-            if (flashlight != null)
+            else
             {
-                flashlight.enabled = !flashlight.enabled;
-                Debug.Log("Linterna " + (flashlight.enabled ? "encendida" : "apagada"));
+                // Fallback al sistema anterior si no está disponible
+                Debug.LogWarning("FlashlightFPSController no disponible, usando sistema básico");
+                HandleFlashlightLegacy();
             }
+        }
+    }
+
+    // ✅ Sistema de linterna anterior como fallback
+    void HandleFlashlightLegacy()
+    {
+        Light flashlight = GetComponentInChildren<Light>();
+
+        if (flashlight == null && playerCamera != null)
+        {
+            GameObject flashlightObj = new GameObject("Flashlight");
+            flashlightObj.transform.SetParent(playerCamera.transform);
+            flashlightObj.transform.localPosition = Vector3.zero;
+            flashlightObj.transform.localRotation = Quaternion.identity;
+
+            flashlight = flashlightObj.AddComponent<Light>();
+            flashlight.type = LightType.Spot;
+            flashlight.range = 10f;
+            flashlight.spotAngle = 45f;
+            flashlight.intensity = 2f;
+            flashlight.color = Color.white;
+            flashlight.enabled = false;
+        }
+
+        if (flashlight != null)
+        {
+            flashlight.enabled = !flashlight.enabled;
+            Debug.Log("Linterna " + (flashlight.enabled ? "encendida" : "apagada"));
         }
     }
 
@@ -443,4 +470,23 @@ public class PlayerController : MonoBehaviour
         showingMessage = false;
         messageTimer = 0f;
     }
+
+    // ✅ MÉTODOS COMENTADOS temporalmente para el debug
+    /*
+    public void SetFlashlightVisibility(bool visible)
+    {
+        if (flashlightController != null)
+        {
+            flashlightController.SetFlashlightVisibility(visible);
+        }
+    }
+
+    public void SetFlashlightIntensity(float intensity)
+    {
+        if (flashlightController != null)
+        {
+            flashlightController.SetLightIntensity(intensity);
+        }
+    }
+    */
 }
