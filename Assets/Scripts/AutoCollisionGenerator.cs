@@ -1,4 +1,4 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 public class AutoCollisionGenerator : MonoBehaviour
 {
@@ -21,7 +21,7 @@ public class AutoCollisionGenerator : MonoBehaviour
     [ContextMenu("Generate Collisions")]
     public void GenerateCollisions()
     {
-        Debug.Log("Iniciando generación de colisiones...");
+        Debug.Log("Iniciando generaciÃ³n de colisiones...");
 
         int collidersCreated = 0;
         int collidersSkipped = 0;
@@ -63,7 +63,7 @@ public class AutoCollisionGenerator : MonoBehaviour
             // Crear mesh collider
             MeshCollider meshCollider = obj.AddComponent<MeshCollider>();
             meshCollider.sharedMesh = meshFilter.sharedMesh;
-            meshCollider.convex = false; // Para geometría estática compleja
+            meshCollider.convex = false; // Para geometrÃ­a estÃ¡tica compleja
 
             // Asignar layer
             obj.layer = (int)Mathf.Log(collisionLayer.value, 2);
@@ -76,7 +76,7 @@ public class AutoCollisionGenerator : MonoBehaviour
             }
         }
 
-        Debug.Log($"Generación completa: {collidersCreated} colliders creados, {collidersSkipped} omitidos");
+        Debug.Log($"GeneraciÃ³n completa: {collidersCreated} colliders creados, {collidersSkipped} omitidos");
     }
 
     [ContextMenu("Remove All Colliders")]
@@ -108,7 +108,7 @@ public class AutoCollisionGenerator : MonoBehaviour
         {
             Vector3 playerPos = player.transform.position;
 
-            // Raycast en múltiples direcciones
+            // Raycast en mÃºltiples direcciones
             Vector3[] directions = {
                 Vector3.forward, Vector3.back, Vector3.left, Vector3.right,
                 Vector3.forward + Vector3.right, Vector3.forward + Vector3.left,
@@ -129,7 +129,7 @@ public class AutoCollisionGenerator : MonoBehaviour
                 }
             }
 
-            Debug.Log($"Test de colisiones: {hits}/{directions.Length} direcciones detectan colisión");
+            Debug.Log($"Test de colisiones: {hits}/{directions.Length} direcciones detectan colisiÃ³n");
         }
     }
 
