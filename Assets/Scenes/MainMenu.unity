@@ -366,8 +366,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -2.869, y: -382.168}
-  m_SizeDelta: {x: 320.664, y: 81.436}
+  m_AnchoredPosition: {x: -2.735, y: -379.903}
+  m_SizeDelta: {x: 321.781, y: 86.193}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &470640007
 MonoBehaviour:
@@ -578,8 +578,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 1.156, y: -264.457}
-  m_SizeDelta: {x: 244.047, y: 108.339}
+  m_AnchoredPosition: {x: -3.382, y: -267.443}
+  m_SizeDelta: {x: 233.045, y: 105.286}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &704626639
 MonoBehaviour:
@@ -1073,10 +1073,10 @@ RectTransform:
   - {fileID: 1217528978}
   m_Father: {fileID: 1789450882}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMin: {x: 0.5, y: 0.47760314}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 8.927, y: -144.197}
-  m_SizeDelta: {x: 344.26, y: 102.41}
+  m_AnchoredPosition: {x: 7.797, y: -128.25}
+  m_SizeDelta: {x: 342.848, y: 77.489}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1069834573
 MonoBehaviour:
@@ -1208,8 +1208,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 2.976, y: -7.784}
-  m_SizeDelta: {x: 420.819, y: 129.16}
+  m_AnchoredPosition: {x: 7.975, y: -8.638}
+  m_SizeDelta: {x: 409.816, y: 125.852}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1127425603
 MonoBehaviour:
@@ -1734,8 +1734,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -3.125, y: -492.525}
-  m_SizeDelta: {x: 235.489, y: 114.077}
+  m_AnchoredPosition: {x: -3.3833, y: -494.097}
+  m_SizeDelta: {x: 233.05, y: 108.635}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1653783702
 MonoBehaviour:
