@@ -7,7 +7,7 @@ public class PlayerController : MonoBehaviour
     public float walkSpeed = 3f;
     public float runSpeed = 6f;
     public float crouchSpeed = 1.5f;
-    public float jumpForce = 8f; // Aumentado para mejor salto
+    public float jumpForce = 8f;
 
     [Header("Camera")]
     public Camera playerCamera;
@@ -17,9 +17,9 @@ public class PlayerController : MonoBehaviour
     public float crouchCameraHeight = 0.6f;
 
     [Header("Ground Check")]
-    public float groundDistance = 0.2f; // Reducido para mejor detección
+    public float groundDistance = 0.2f;
     public LayerMask groundMask = 1;
-    public Transform groundCheckPoint; // Punto específico para revisar suelo
+    public Transform groundCheckPoint;
 
     [Header("Stealth")]
     public float currentNoiseLevel = 0f;
@@ -36,6 +36,9 @@ public class PlayerController : MonoBehaviour
 
     [Header("Flashlight")]
     public Light flashlight;
+
+    // REFERENCIA AL MENÚ DE PAUSA - NUEVA
+    private PoliNightsPauseMenu pauseMenu;
 
     // Components
     private Rigidbody rb;
@@ -58,6 +61,13 @@ public class PlayerController : MonoBehaviour
 
     void Start()
     {
+        // ENCONTRAR REFERENCIA AL MENÚ DE PAUSA - NUEVO
+        pauseMenu = FindFirstObjectByType<PoliNightsPauseMenu>();
+        if (pauseMenu == null)
+        {
+            Debug.LogWarning("No se encontró PoliNightsPauseMenu en la escena!");
+        }
+
         // Get components
         rb = GetComponent<Rigidbody>();
         playerCollider = GetComponent<CapsuleCollider>();
@@ -76,7 +86,7 @@ public class PlayerController : MonoBehaviour
             rb.constraints = RigidbodyConstraints.FreezeRotationX |
                             RigidbodyConstraints.FreezeRotationY |
                             RigidbodyConstraints.FreezeRotationZ;
-            rb.mass = 1f; // Masa estándar
+            rb.mass = 1f;
         }
 
         // Camera setup
@@ -95,7 +105,6 @@ public class PlayerController : MonoBehaviour
 
     void SetupGroundCheck()
     {
-        // Crear punto de verificación de suelo si no existe
         if (groundCheckPoint == null)
         {
             GameObject groundCheckObj = new GameObject("GroundCheckPoint");
@@ -116,7 +125,6 @@ public class PlayerController : MonoBehaviour
 
         if (playerCamera != null)
         {
-            // Create camera holder
             GameObject holderObj = new GameObject("CameraHolder");
             holderObj.transform.SetParent(transform);
             holderObj.transform.localPosition = new Vector3(0, normalCameraHeight, 0);
@@ -136,13 +144,11 @@ public class PlayerController : MonoBehaviour
             Debug.Log("=== SETUP LINTERNA ===");
             Debug.Log("Buscando objetos hijos de la cámara:");
 
-            // Mostrar TODOS los hijos de la cámara
             for (int i = 0; i < playerCamera.transform.childCount; i++)
             {
                 Transform child = playerCamera.transform.GetChild(i);
                 Debug.Log($"  Hijo {i}: '{child.name}' - Activo: {child.gameObject.activeSelf}");
 
-                // Mostrar componentes de cada hijo
                 Component[] components = child.GetComponents<Component>();
                 foreach (Component comp in components)
                 {
@@ -150,14 +156,11 @@ public class PlayerController : MonoBehaviour
                 }
             }
 
-            // Buscar la luz específicamente
             flashlight = playerCamera.transform.Find("LuzLinterna")?.GetComponent<Light>();
 
             if (flashlight == null)
             {
                 Debug.LogError("❌ No encontró 'LuzLinterna'! Buscando cualquier Light...");
-
-                // Buscar cualquier Light como backup
                 flashlight = playerCamera.GetComponentInChildren<Light>();
 
                 if (flashlight != null)
@@ -186,6 +189,12 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
+        // VERIFICAR SI EL JUEGO ESTÁ PAUSADO - NUEVO
+        if (pauseMenu != null && pauseMenu.IsPaused)
+        {
+            return; // No procesar input del jugador si está pausado
+        }
+
         HandleInput();
         HandleMovement();
         HandleMouseLook();
@@ -219,6 +228,8 @@ public class PlayerController : MonoBehaviour
         {
             HandleInteraction();
         }
+
+        // NOTA: NO manejamos ESC aquí porque lo maneja PoliNightsPauseMenu
     }
 
     void HandleMovement()
@@ -296,19 +307,14 @@ public class PlayerController : MonoBehaviour
 
     void CheckGrounded()
     {
-        // MÉTODO MEJORADO de detección de suelo
         if (groundCheckPoint != null)
         {
-            // Usar el punto específico para revisar
             isGrounded = Physics.CheckSphere(groundCheckPoint.position, groundDistance, groundMask);
-
-            // Debug visual
             Debug.DrawLine(groundCheckPoint.position, groundCheckPoint.position + Vector3.down * groundDistance,
                           isGrounded ? Color.green : Color.red);
         }
         else
         {
-            // Fallback al método anterior
             Vector3 rayStart = transform.position + Vector3.up * 0.1f;
             isGrounded = Physics.Raycast(rayStart, Vector3.down, 1.2f, groundMask);
             Debug.DrawRay(rayStart, Vector3.down * 1.2f, isGrounded ? Color.green : Color.red);
@@ -317,16 +323,10 @@ public class PlayerController : MonoBehaviour
 
     void HandleJump()
     {
-        // SALTO MEJORADO - Resetear velocidad Y antes de aplicar fuerza
         Vector3 currentVelocity = rb.linearVelocity;
         rb.linearVelocity = new Vector3(currentVelocity.x, 0f, currentVelocity.z);
-
-        // Aplicar fuerza de salto
         rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
-
-        // Efectos adicionales
         currentNoiseLevel = 2f;
-
         Debug.Log($"¡SALTANDO! Fuerza aplicada: {jumpForce}, isGrounded: {isGrounded}");
     }
 
@@ -367,7 +367,6 @@ public class PlayerController : MonoBehaviour
             flashlight.enabled = !flashlight.enabled;
             Debug.Log($"🔦 Linterna {(flashlight.enabled ? "ENCENDIDA" : "APAGADA")}");
 
-            // Buscar y mostrar TODOS los objetos relacionados con linterna
             Debug.Log("Objetos en la cámara después del toggle:");
             for (int i = 0; i < playerCamera.transform.childCount; i++)
             {
@@ -384,10 +383,8 @@ public class PlayerController : MonoBehaviour
                 }
             }
 
-            // INTENTAR FORZAR VISIBILIDAD DE TODOS LOS MODELOS
             foreach (Transform child in playerCamera.transform)
             {
-                // Si no es la luz, es potencialmente el modelo
                 if (child.GetComponent<Light>() == null)
                 {
                     child.gameObject.SetActive(true);
@@ -411,8 +408,6 @@ public class PlayerController : MonoBehaviour
         else
         {
             Debug.LogError("❌ flashlight es NULL!");
-
-            // Intentar encontrar la luz nuevamente
             Debug.Log("Intentando encontrar la luz nuevamente...");
             SetupFlashlight();
         }
@@ -422,7 +417,6 @@ public class PlayerController : MonoBehaviour
 
     Transform FindFlashlightModel(Transform parent)
     {
-        // Buscar por nombres comunes de modelo de linterna
         string[] possibleNames = { "modelo de la linterna", "linterna", "Linterna", "FlashlightModel", "Flashlight_Model" };
 
         foreach (string name in possibleNames)
@@ -434,11 +428,10 @@ public class PlayerController : MonoBehaviour
             }
         }
 
-        // Si no encuentra por nombre, buscar cualquier hijo que NO sea la luz
         for (int i = 0; i < parent.childCount; i++)
         {
             Transform child = parent.GetChild(i);
-            if (child.GetComponent<Light>() == null) // No es la luz, podría ser el modelo
+            if (child.GetComponent<Light>() == null)
             {
                 return child;
             }
@@ -476,7 +469,8 @@ public class PlayerController : MonoBehaviour
 
     void OnApplicationFocus(bool hasFocus)
     {
-        if (hasFocus)
+        // SOLO configurar cursor si NO está pausado - MODIFICADO
+        if (hasFocus && (pauseMenu == null || !pauseMenu.IsPaused))
         {
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
@@ -524,5 +518,26 @@ public class PlayerController : MonoBehaviour
         currentInteractionMessage = "";
         showingMessage = false;
         messageTimer = 0f;
+    }
+
+    // MÉTODO PÚBLICO PARA EL MENÚ DE PAUSA - NUEVO
+    public void OnGamePaused()
+    {
+        // Método llamado cuando el juego se pausa
+        // Aquí puedes agregar lógica específica del jugador al pausar
+        Debug.Log("PlayerController: Juego pausado");
+    }
+
+    // MÉTODO PÚBLICO PARA EL MENÚ DE PAUSA - NUEVO
+    public void OnGameResumed()
+    {
+        // Método llamado cuando el juego se reanuda
+        // Restaurar configuración del cursor si es necesario
+        if (Application.isFocused)
+        {
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+        }
+        Debug.Log("PlayerController: Juego reanudado");
     }
 }
