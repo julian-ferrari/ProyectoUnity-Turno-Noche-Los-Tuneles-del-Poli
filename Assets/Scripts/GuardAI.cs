@@ -11,21 +11,21 @@ public class GuardAI : MonoBehaviour
     [Header("Detection")]
     public float detectionRange = 5f;
     public float hearingRange = 8f;
-    public float fieldOfViewAngle = 60f; // Ángulo de visión más realista
+    public float fieldOfViewAngle = 60f;
 
     [Header("Chasing")]
     public float chaseSpeed = 4f;
     public float investigateTime = 10f;
     public float maxChaseDistance = 20f;
-    public float minChaseDistance = 2f; // Distancia mínima para evitar pegarse
-    public float losePlayerTime = 5f; // Tiempo antes de perder al jugador
+    public float minChaseDistance = 2f;
+    public float losePlayerTime = 5f;
 
     [Header("AI Behavior")]
     public bool canOpenDoors = true;
     public bool canHearFootsteps = true;
     public bool canSeeFlashlight = true;
     public float suspicionDecayTime = 5f;
-    public float alertnessLevel = 0f; // 0 = calm, 100 = maximum alert
+    public float alertnessLevel = 0f;
 
     [Header("Animation & Audio")]
     public Animator guardAnimator;
@@ -33,17 +33,28 @@ public class GuardAI : MonoBehaviour
     public AudioClip[] alertSounds;
     public AudioClip[] patrolSounds;
 
+    [Header("Patrol Improvements")]
+    public bool loopPatrol = true;
+    public bool randomPatrol = false;
+    public float pointReachedDistance = 0.5f;
+
+    [Header("Debug & Testing")]
+    public bool debugMode = true;
+    public KeyCode testDetectionKey = KeyCode.T;
+    public KeyCode resetGuardKey = KeyCode.R;
+    public KeyCode togglePatrolKey = KeyCode.P;
+
     private int currentPatrolIndex = 0;
     private float waitTimer = 0f;
     private float investigateTimer = 0f;
-    private float losePlayerTimer = 0f; // Contador para perder jugador
+    private float losePlayerTimer = 0f;
     private Transform player;
     private PlayerController playerController;
     private Vector3 lastKnownPlayerPosition;
     private Vector3 investigatePosition;
     private bool hasSeenPlayer = false;
+    public bool patrolEnabled = true;
 
-    // Variables para posición inicial
     private Vector3 initialPosition;
     private Quaternion initialRotation;
     private int initialPatrolIndex;
@@ -62,12 +73,10 @@ public class GuardAI : MonoBehaviour
         if (audioSource == null)
             audioSource = GetComponent<AudioSource>();
 
-        // NUEVO: Guardar posición inicial
         initialPosition = transform.position;
         initialRotation = transform.rotation;
         initialPatrolIndex = 0;
 
-        // Si no hay patrol points, crear algunos básicos
         if (patrolPoints.Length == 0)
         {
             CreateBasicPatrolPoints();
@@ -76,38 +85,13 @@ public class GuardAI : MonoBehaviour
         StartCoroutine(SuspicionDecay());
     }
 
-    // Método público para resetear el guardia
-    public void ResetGuard()
-    {
-        // Resetear posición y rotación
-        transform.position = initialPosition;
-        transform.rotation = initialRotation;
-
-        // Resetear estado
-        currentState = GuardState.Patrolling;
-        previousState = GuardState.Patrolling;
-        currentPatrolIndex = initialPatrolIndex;
-
-        // Resetear timers y flags
-        waitTimer = 0f;
-        investigateTimer = 0f;
-        losePlayerTimer = 0f;
-        hasSeenPlayer = false;
-        alertnessLevel = 0f;
-
-        // Resetear velocidad del Rigidbody si existe
-        Rigidbody rb = GetComponent<Rigidbody>();
-        if (rb != null)
-        {
-            rb.linearVelocity = Vector3.zero;
-            rb.angularVelocity = Vector3.zero;
-        }
-
-        Debug.Log("Guardia reseteado a posición inicial");
-    }
-
     void Update()
     {
+        // Solo procesar inputs de prueba en el editor o con debug activado
+#if UNITY_EDITOR
+        TestInputs();
+#endif
+
         UpdateAlertness();
 
         switch (currentState)
@@ -134,13 +118,62 @@ public class GuardAI : MonoBehaviour
                 break;
         }
 
-        // Actualizar animaciones
         UpdateAnimations();
+    }
+
+    void TestInputs()
+    {
+        if (!debugMode) return;
+
+        if (Input.GetKeyDown(testDetectionKey))
+        {
+            Debug.Log("TEST: Forzando detección del jugador");
+            StartChasing();
+        }
+
+        if (Input.GetKeyDown(resetGuardKey))
+        {
+            Debug.Log("TEST: Reseteando guardia");
+            ResetGuard();
+        }
+
+        if (Input.GetKeyDown(togglePatrolKey))
+        {
+            patrolEnabled = !patrolEnabled;
+            Debug.Log("TEST: Patrulla " + (patrolEnabled ? "activada" : "desactivada"));
+        }
+    }
+
+    public void TestGuardBehavior()
+    {
+        Debug.Log("=== INICIANDO PRUEBAS DEL GUARDIA ===");
+        Debug.Log("Estado actual: " + currentState);
+        Debug.Log("Nivel de alerta: " + alertnessLevel);
+        Debug.Log("Puntos de patrulla: " + patrolPoints.Length);
+
+        StartCoroutine(TestSequence());
+    }
+
+    IEnumerator TestSequence()
+    {
+        Debug.Log("Probando transición a Investigación...");
+        StartInvestigating(player.position + new Vector3(5, 0, 5));
+
+        yield return new WaitForSeconds(3f);
+
+        Debug.Log("Probando transición a Persecución...");
+        StartChasing();
+
+        yield return new WaitForSeconds(5f);
+
+        Debug.Log("Probando reset del guardia...");
+        ResetGuard();
+
+        Debug.Log("=== PRUEBAS COMPLETADAS ===");
     }
 
     void UpdateAlertness()
     {
-        // La alerta afecta la velocidad de detección y movimiento
         float alertMultiplier = 1f + (alertnessLevel / 100f);
         patrolSpeed = 2f * alertMultiplier;
         detectionRange = 5f * alertMultiplier;
@@ -148,20 +181,45 @@ public class GuardAI : MonoBehaviour
 
     void Patrol()
     {
-        if (patrolPoints.Length == 0) return;
+        if (!patrolEnabled || patrolPoints.Length == 0) return;
 
         Transform targetPoint = patrolPoints[currentPatrolIndex];
         float distance = Vector3.Distance(transform.position, targetPoint.position);
 
-        if (distance < 0.5f)
+        if (distance < pointReachedDistance)
         {
             waitTimer += Time.deltaTime;
+
+            if (guardAnimator != null)
+                guardAnimator.SetBool("IsWaiting", true);
+
             if (waitTimer >= waitTime)
             {
                 waitTimer = 0f;
-                currentPatrolIndex = (currentPatrolIndex + 1) % patrolPoints.Length;
 
-                // Ocasionalmente hacer sonidos de patrulla
+                if (guardAnimator != null)
+                    guardAnimator.SetBool("IsWaiting", false);
+
+                if (randomPatrol)
+                {
+                    int newIndex;
+                    do
+                    {
+                        newIndex = Random.Range(0, patrolPoints.Length);
+                    } while (newIndex == currentPatrolIndex && patrolPoints.Length > 1);
+
+                    currentPatrolIndex = newIndex;
+                }
+                else
+                {
+                    currentPatrolIndex++;
+
+                    if (currentPatrolIndex >= patrolPoints.Length)
+                    {
+                        currentPatrolIndex = loopPatrol ? 0 : patrolPoints.Length - 1;
+                    }
+                }
+
                 if (Random.value < 0.3f && patrolSounds.Length > 0 && audioSource != null)
                 {
                     audioSource.PlayOneShot(patrolSounds[Random.Range(0, patrolSounds.Length)]);
@@ -179,20 +237,18 @@ public class GuardAI : MonoBehaviour
         float distanceToPlayer = Vector3.Distance(transform.position, player.position);
         bool playerDetected = false;
 
-        // Detección visual
         if (distanceToPlayer <= detectionRange)
         {
             Vector3 directionToPlayer = (player.position - transform.position).normalized;
             float angleToPlayer = Vector3.Angle(transform.forward, directionToPlayer);
 
-            if (angleToPlayer < fieldOfViewAngle / 2f) // Campo de visión
+            if (angleToPlayer < fieldOfViewAngle / 2f)
             {
                 RaycastHit hit;
                 if (Physics.Raycast(transform.position + Vector3.up, directionToPlayer, out hit, detectionRange))
                 {
                     if (hit.collider.CompareTag("Player"))
                     {
-                        // Factor de detección basado en si el jugador está agachado, corriendo, etc.
                         float detectionChance = CalculateDetectionChance();
                         if (Random.value < detectionChance)
                         {
@@ -203,7 +259,6 @@ public class GuardAI : MonoBehaviour
             }
         }
 
-        // Detección de linterna
         if (canSeeFlashlight && distanceToPlayer <= detectionRange * 1.5f)
         {
             Light flashlight = player.GetComponentInChildren<Light>();
@@ -217,15 +272,13 @@ public class GuardAI : MonoBehaviour
             }
         }
 
-        // Detección auditiva
         if (canHearFootsteps && distanceToPlayer <= hearingRange)
         {
             float noiseThreshold = 0.5f;
-            if (alertnessLevel > 50f) noiseThreshold = 0.2f; // Más sensible cuando está alerta
+            if (alertnessLevel > 50f) noiseThreshold = 0.2f;
 
             if (playerController.currentNoiseLevel > noiseThreshold)
             {
-                // No detecta directamente, pero va a investigar
                 StartInvestigating(player.position);
                 return;
             }
@@ -241,19 +294,16 @@ public class GuardAI : MonoBehaviour
     {
         float baseChance = 0.8f;
 
-        // Factores que reducen la detección
-        if (playerController.currentNoiseLevel < 1f) baseChance -= 0.3f; // Jugador sigiloso
-
-        // Factores que aumentan la detección
-        if (alertnessLevel > 50f) baseChance += 0.2f; // Guardia alerta
-        if (playerController.currentNoiseLevel > 2f) baseChance += 0.3f; // Jugador corriendo
+        if (playerController.currentNoiseLevel < 1f) baseChance -= 0.3f;
+        if (alertnessLevel > 50f) baseChance += 0.2f;
+        if (playerController.currentNoiseLevel > 2f) baseChance += 0.3f;
 
         return Mathf.Clamp01(baseChance);
     }
 
     void StartInvestigating(Vector3 position)
     {
-        if (currentState == GuardState.Chasing) return; // No interrumpir persecución
+        if (currentState == GuardState.Chasing) return;
 
         previousState = currentState;
         currentState = GuardState.Investigating;
@@ -274,15 +324,11 @@ public class GuardAI : MonoBehaviour
         }
         else
         {
-            // Llegó al punto de investigación, buscar alrededor
             investigateTimer += Time.deltaTime;
-
-            // Rotar mirando alrededor
             transform.Rotate(0, 45f * Time.deltaTime, 0);
 
             if (investigateTimer >= investigateTime)
             {
-                // Terminar investigación
                 if (hasSeenPlayer)
                 {
                     currentState = GuardState.Searching;
@@ -294,7 +340,6 @@ public class GuardAI : MonoBehaviour
             }
         }
 
-        // Seguir buscando al jugador mientras investiga
         CheckForPlayer();
     }
 
@@ -304,21 +349,19 @@ public class GuardAI : MonoBehaviour
         hasSeenPlayer = true;
         alertnessLevel = 100f;
 
-        if (distanceToPlayer > minChaseDistance + 1f) // Un poco más de margen
+        if (distanceToPlayer > minChaseDistance + 1f)
         {
-            // Perseguir normalmente
             lastKnownPlayerPosition = player.position;
             MoveTowards(player.position, chaseSpeed);
             losePlayerTimer = 0f;
         }
-        else if (distanceToPlayer > 1.5f) // Zona intermedia
+        else if (distanceToPlayer > 1.5f)
         {
             MoveTowards(player.position, chaseSpeed * 0.5f);
             losePlayerTimer = 0f;
         }
         else
         {
-            // MUY cerca - capturar inmediatamente
             CapturePlayer();
             return;
         }
@@ -327,7 +370,6 @@ public class GuardAI : MonoBehaviour
         {
             losePlayerTimer += Time.deltaTime;
 
-            // Si perdió la vista Y el jugador está lejos, perder más rápido
             float loseTimeModifier = distanceToPlayer > 10f ? 2f : 1f;
 
             if (losePlayerTimer >= (losePlayerTime / loseTimeModifier) || distanceToPlayer > maxChaseDistance)
@@ -353,7 +395,6 @@ public class GuardAI : MonoBehaviour
         }
         else
         {
-            // Buscar en área
             investigateTimer += Time.deltaTime;
             transform.Rotate(0, 60f * Time.deltaTime, 0);
 
@@ -364,7 +405,7 @@ public class GuardAI : MonoBehaviour
             }
         }
 
-        CheckForPlayer(); // Puede volver a detectar
+        CheckForPlayer();
     }
 
     void ReturnToPatrol()
@@ -379,7 +420,6 @@ public class GuardAI : MonoBehaviour
         else
         {
             currentState = GuardState.Patrolling;
-            // Encontrar el índice del patrol point más cercano
             for (int i = 0; i < patrolPoints.Length; i++)
             {
                 if (patrolPoints[i] == nearestPatrolPoint)
@@ -391,14 +431,13 @@ public class GuardAI : MonoBehaviour
         }
     }
 
-    void StartChasing()
+    public void StartChasing()
     {
         currentState = GuardState.Chasing;
         alertnessLevel = 100f;
         hasSeenPlayer = true;
-        losePlayerTimer = 0f; // Resetear timer
+        losePlayerTimer = 0f;
 
-        // Sonido de alerta
         if (alertSounds.Length > 0 && audioSource != null)
         {
             audioSource.PlayOneShot(alertSounds[Random.Range(0, alertSounds.Length)]);
@@ -421,16 +460,14 @@ public class GuardAI : MonoBehaviour
     {
         Vector3 direction = (target - transform.position).normalized;
 
-        // Usar Rigidbody para movimiento con colisiones físicas
         Rigidbody guardRb = GetComponent<Rigidbody>();
         if (guardRb != null)
         {
-            // Movimiento más controlado con límite de velocidad
+            guardRb.freezeRotation = true;
             Vector3 movement = direction * speed * Time.fixedDeltaTime;
             Vector3 newPosition = guardRb.position + movement;
             guardRb.MovePosition(newPosition);
 
-            // Limitar velocidad para evitar comportamientos extraños
             if (guardRb.linearVelocity.magnitude > speed)
             {
                 guardRb.linearVelocity = guardRb.linearVelocity.normalized * speed;
@@ -438,11 +475,9 @@ public class GuardAI : MonoBehaviour
         }
         else
         {
-            // Fallback al movimiento simple
             transform.position += direction * speed * Time.deltaTime;
         }
 
-        // Rotación suave hacia el objetivo
         if (direction != Vector3.zero)
         {
             Quaternion targetRotation = Quaternion.LookRotation(direction);
@@ -534,26 +569,104 @@ public class GuardAI : MonoBehaviour
         }
     }
 
+    public void ResetGuard()
+    {
+        transform.position = initialPosition;
+        transform.rotation = initialRotation;
+
+        currentState = GuardState.Patrolling;
+        previousState = GuardState.Patrolling;
+        currentPatrolIndex = initialPatrolIndex;
+
+        waitTimer = 0f;
+        investigateTimer = 0f;
+        losePlayerTimer = 0f;
+        hasSeenPlayer = false;
+        alertnessLevel = 0f;
+
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
+
+        Debug.Log("Guardia reseteado a posición inicial");
+    }
+
+    public void AddPatrolPoint(Vector3 position)
+    {
+        GameObject newPoint = new GameObject("PatrolPoint_" + patrolPoints.Length);
+        newPoint.transform.position = position;
+
+        System.Array.Resize(ref patrolPoints, patrolPoints.Length + 1);
+        patrolPoints[patrolPoints.Length - 1] = newPoint.transform;
+
+        Debug.Log("Nuevo punto de patrulla agregado: " + position);
+    }
+
+    public void ClearPatrolPoints()
+    {
+        foreach (Transform point in patrolPoints)
+        {
+            if (point != null && point.gameObject.name.StartsWith("PatrolPoint_"))
+            {
+                Destroy(point.gameObject);
+            }
+        }
+
+        patrolPoints = new Transform[0];
+        Debug.Log("Todos los puntos de patrulla eliminados");
+    }
+
     void OnDrawGizmosSelected()
     {
-        // Rango de detección
+        if (!debugMode) return;
+
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, detectionRange);
 
-        // Rango auditivo
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, hearingRange);
 
-        // Distancia mínima de persecución
         Gizmos.color = Color.blue;
         Gizmos.DrawWireSphere(transform.position, minChaseDistance);
 
-        // Campo de visión
-        Gizmos.color = Color.cyan;
-        Vector3 leftBoundary = Quaternion.AngleAxis(-fieldOfViewAngle / 2f, Vector3.up) * transform.forward * detectionRange;
-        Vector3 rightBoundary = Quaternion.AngleAxis(fieldOfViewAngle / 2f, Vector3.up) * transform.forward * detectionRange;
+        Gizmos.color = new Color(0, 1, 1, 0.2f);
+        Vector3 leftBoundary = Quaternion.AngleAxis(-fieldOfViewAngle / 2, Vector3.up) * transform.forward * detectionRange;
+        Vector3 rightBoundary = Quaternion.AngleAxis(fieldOfViewAngle / 2, Vector3.up) * transform.forward * detectionRange;
 
-        Gizmos.DrawLine(transform.position, transform.position + leftBoundary);
-        Gizmos.DrawLine(transform.position, transform.position + rightBoundary);
+        Gizmos.DrawRay(transform.position, leftBoundary);
+        Gizmos.DrawRay(transform.position, rightBoundary);
+        Gizmos.DrawLine(transform.position + rightBoundary, transform.position + leftBoundary);
+
+        switch (currentState)
+        {
+            case GuardState.Patrolling:
+                if (patrolPoints.Length > 0)
+                {
+                    Gizmos.color = Color.green;
+                    Gizmos.DrawLine(transform.position, patrolPoints[currentPatrolIndex].position);
+                    Gizmos.DrawWireSphere(patrolPoints[currentPatrolIndex].position, 0.5f);
+                }
+                break;
+
+            case GuardState.Investigating:
+                Gizmos.color = Color.yellow;
+                Gizmos.DrawLine(transform.position, investigatePosition);
+                Gizmos.DrawWireSphere(investigatePosition, 0.7f);
+                break;
+
+            case GuardState.Chasing:
+                Gizmos.color = Color.red;
+                Gizmos.DrawLine(transform.position, player.position);
+                break;
+
+            case GuardState.Searching:
+                Gizmos.color = Color.magenta;
+                Gizmos.DrawLine(transform.position, lastKnownPlayerPosition);
+                Gizmos.DrawWireSphere(lastKnownPlayerPosition, 1f);
+                break;
+        }
     }
 }

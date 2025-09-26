@@ -29,6 +29,9 @@ public class PoliNightsPauseMenu : MonoBehaviour
     private bool canPause = true;
     private float originalTimeScale;
 
+    // Variable estática para comunicación entre escenas
+    public static bool shouldShowPauseMenuOnLoad = false;
+
     // Referencias del juego para pausar correctamente
     private AudioListener audioListener;
     private GameObject player;
@@ -39,13 +42,12 @@ public class PoliNightsPauseMenu : MonoBehaviour
         originalTimeScale = Time.timeScale;
         audioListener = FindFirstObjectByType<AudioListener>();
 
-        // Encontrar referencia del jugador (ajustar según tu setup)
+        // Encontrar referencia del jugador
         player = GameObject.FindGameObjectWithTag("Player");
 
         // DEBUG: Verificar referencias
         Debug.Log("=== PAUSE MENU SETUP ===");
         Debug.Log($"pauseMenuCanvas: {(pauseMenuCanvas != null ? pauseMenuCanvas.name : "NULL")}");
-        Debug.Log($"pauseMenuPanel: {(pauseMenuPanel != null ? pauseMenuPanel.name : "NULL")}");
         Debug.Log($"resumeButton: {(resumeButton != null ? resumeButton.name : "NULL")}");
         Debug.Log($"player found: {(player != null ? player.name : "NULL")}");
 
@@ -67,6 +69,14 @@ public class PoliNightsPauseMenu : MonoBehaviour
         }
 
         Debug.Log("=== FIN PAUSE MENU SETUP ===");
+
+        // Verificar si debe mostrar el menú al cargar (regresando de logros/créditos)
+        if (shouldShowPauseMenuOnLoad)
+        {
+            shouldShowPauseMenuOnLoad = false; // Resetear flag
+            Debug.Log("Mostrando menú de pausa porque regresó de otra escena");
+            Invoke(nameof(PauseGame), 0.1f);
+        }
     }
 
     void Update()
@@ -78,22 +88,14 @@ public class PoliNightsPauseMenu : MonoBehaviour
     {
         if (!canPause) return;
 
-        // DEBUG adicional
         if (Input.GetKeyDown(pauseKey))
         {
-            Debug.Log($"=== ESC PRESIONADO ===");
-            Debug.Log($"canPause: {canPause}");
-            Debug.Log($"isPaused: {isPaused}");
-            Debug.Log($"pauseMenuCanvas: {(pauseMenuCanvas != null ? pauseMenuCanvas.name : "NULL")}");
-
             if (isPaused)
             {
-                Debug.Log("Intentando REANUDAR...");
                 ResumeGame();
             }
             else
             {
-                Debug.Log("Intentando PAUSAR...");
                 PauseGame();
             }
         }
@@ -146,29 +148,20 @@ public class PoliNightsPauseMenu : MonoBehaviour
     {
         if (!canPause || isPaused) return;
 
-        Debug.Log("=== PAUSANDO JUEGO ===");
-
         isPaused = true;
         Time.timeScale = 0f;
-        Debug.Log($"Time.timeScale establecido a: {Time.timeScale}");
 
         // Mostrar menú de pausa
         if (pauseMenuCanvas != null)
         {
             pauseMenuCanvas.SetActive(true);
-            Debug.Log($"Canvas activado: {pauseMenuCanvas.name}");
-        }
-        else
-        {
-            Debug.LogError("❌ pauseMenuCanvas es NULL!");
         }
 
         // Configurar cursor
         Cursor.visible = true;
         Cursor.lockState = CursorLockMode.None;
-        Debug.Log("Cursor configurado: visible=true, lockState=None");
 
-        // Pausar audio del juego (opcional)
+        // Pausar audio del juego
         if (audioListener != null)
         {
             AudioListener.pause = true;
@@ -177,21 +170,13 @@ public class PoliNightsPauseMenu : MonoBehaviour
         // Reproducir sonido de pausa
         PlayPauseSound();
 
-        // Seleccionar el primer botón para navegación con teclado
+        // Seleccionar el primer botón
         if (resumeButton != null)
         {
             EventSystem.current.SetSelectedGameObject(resumeButton.gameObject);
-            Debug.Log($"Botón seleccionado: {resumeButton.name}");
-        }
-        else
-        {
-            Debug.LogError("❌ resumeButton es NULL!");
         }
 
-        // Pausar scripts específicos del jugador (opcional)
-        PausePlayerScripts(true);
-
-        Debug.Log("PoliNights - Juego pausado COMPLETADO");
+        Debug.Log("PoliNights - Juego pausado");
     }
 
     public void ResumeGame()
@@ -205,10 +190,9 @@ public class PoliNightsPauseMenu : MonoBehaviour
         if (pauseMenuCanvas != null)
             pauseMenuCanvas.SetActive(false);
 
-        // Restaurar configuración del cursor (ajustar según tu juego)
-        // Descomenta y ajusta según necesites:
-        // Cursor.visible = false;
-        // Cursor.lockState = CursorLockMode.Locked;
+        // Restaurar cursor (ajusta según necesites)
+        Cursor.visible = false;
+        Cursor.lockState = CursorLockMode.Locked;
 
         // Reanudar audio
         if (audioListener != null)
@@ -219,9 +203,6 @@ public class PoliNightsPauseMenu : MonoBehaviour
         // Reproducir sonido de reanudación
         PlayResumeSound();
 
-        // Reanudar scripts del jugador
-        PausePlayerScripts(false);
-
         Debug.Log("PoliNights - Juego reanudado");
     }
 
@@ -229,41 +210,41 @@ public class PoliNightsPauseMenu : MonoBehaviour
     {
         Debug.Log("Guardar juego - Funcionalidad pendiente");
         // TODO: Implementar sistema de guardado
-
-        // Ejemplo de estructura:
-        // PlayerPrefs.SetFloat("PlayerPosX", player.transform.position.x);
-        // PlayerPrefs.SetFloat("PlayerPosY", player.transform.position.y);
-        // PlayerPrefs.SetFloat("PlayerPosZ", player.transform.position.z);
-        // PlayerPrefs.SetString("CurrentLevel", SceneManager.GetActiveScene().name);
-        // PlayerPrefs.Save();
-
-        // Mostrar mensaje de confirmación (opcional)
-        ShowSaveConfirmation();
     }
 
     public void OpenAchievements()
     {
         Debug.Log("Abrir menú de logros desde pausa");
 
+        // Marcar que viene del menú de pausa
+        AchievementsManager.cameFromPauseMenu = true;
+
         // Restaurar timeScale antes de cambiar escena
-        ResumeGame();
+        Time.timeScale = originalTimeScale;
+        AudioListener.pause = false;
 
         // Cargar escena de logros
         SceneManager.LoadScene("AchievementsMenu");
     }
 
+    public void OpenCredits()
+    {
+        Debug.Log("Abrir menú de créditos desde pausa");
+
+        // Marcar que viene del menú de pausa
+        CreditsManager.cameFromPauseMenu = true;
+
+        // Restaurar timeScale antes de cambiar escena
+        Time.timeScale = originalTimeScale;
+        AudioListener.pause = false;
+
+        // Cargar escena de créditos
+        SceneManager.LoadScene("CreditsMenu");
+    }
+
     public void SurrenderGame()
     {
         Debug.Log("Rendirse - Funcionalidad pendiente");
-        // TODO: Implementar lógica de rendición
-
-        // Ejemplo:
-        // - Mostrar pantalla de Game Over
-        // - Resetear progreso del nivel
-        // - Volver al menú principal
-        // - Guardar estadísticas de rendición
-
-        // Por ahora, volver al menú principal
         ExitToMainMenu();
     }
 
@@ -277,29 +258,6 @@ public class PoliNightsPauseMenu : MonoBehaviour
 
         // Cargar escena del menú principal
         SceneManager.LoadScene("MainMenu");
-    }
-
-    void PausePlayerScripts(bool pause)
-    {
-        if (player == null) return;
-
-        // Pausar/reanudar scripts específicos del jugador
-        // Ajustar según los componentes que tenga tu jugador
-
-        MonoBehaviour[] playerScripts = player.GetComponents<MonoBehaviour>();
-        foreach (MonoBehaviour script in playerScripts)
-        {
-            if (script != null)
-            {
-                script.enabled = !pause;
-            }
-        }
-    }
-
-    void ShowSaveConfirmation()
-    {
-        // TODO: Mostrar mensaje de "Juego guardado" temporalmente
-        Debug.Log("¡Juego guardado exitosamente!");
     }
 
     #region Audio Methods
@@ -328,25 +286,7 @@ public class PoliNightsPauseMenu : MonoBehaviour
     }
     #endregion
 
-    #region Event Handlers
-    void OnApplicationFocus(bool hasFocus)
-    {
-        if (!hasFocus && pauseOnFocusLost && !isPaused && canPause)
-        {
-            PauseGame();
-        }
-    }
-
-    void OnApplicationPause(bool pauseStatus)
-    {
-        if (pauseStatus && pauseOnFocusLost && !isPaused && canPause)
-        {
-            PauseGame();
-        }
-    }
-    #endregion
-
-    #region Public Properties and Methods
+    #region Public Properties
     public bool IsPaused => isPaused;
     public bool CanPause => canPause;
 
@@ -357,15 +297,6 @@ public class PoliNightsPauseMenu : MonoBehaviour
         if (!canPause && isPaused)
         {
             ResumeGame();
-        }
-    }
-
-    // Método para pausar desde otros scripts
-    public void PauseFromScript()
-    {
-        if (canPause && !isPaused)
-        {
-            PauseGame();
         }
     }
     #endregion
