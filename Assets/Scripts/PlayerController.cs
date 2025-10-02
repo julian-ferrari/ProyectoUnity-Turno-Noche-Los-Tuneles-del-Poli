@@ -59,9 +59,6 @@ public class PlayerController : MonoBehaviour
     private float originalColliderHeight;
     private Vector3 originalColliderCenter;
 
-    private AudioManager audioManager;
-    private bool isPlayingSteps = false;
-
     void Start()
     {
         // ENCONTRAR REFERENCIA AL MENÚ DE PAUSA - NUEVO
@@ -104,8 +101,6 @@ public class PlayerController : MonoBehaviour
         // Initialize camera height
         targetCameraHeight = normalCameraHeight;
         currentCameraHeight = normalCameraHeight;
-
-        audioManager = AudioManager.GetInstance();
     }
 
     void SetupGroundCheck()
