@@ -18,7 +18,10 @@ public class Door : MonoBehaviour
     public Vector3 pivotOffset = new Vector3(-0.5f, 0, 0); // Donde están las bisagras
 
     [Header("Interaction")]
-    public float interactionRange = 1.5f;
+    [Tooltip("Distancia máxima para interactuar con la puerta")]
+    public float interactionRange = 2f;
+    [Tooltip("Tamaño del trigger de detección (recomendado: un poco más grande que interactionRange)")]
+    public float triggerSize = 3f;
     public string lockedMessage = "La puerta está cerrada. Necesitas una llave.";
     public string openMessage = "Presiona E para abrir/cerrar";
     public string unlockMessage = "¡Puerta desbloqueada!";
@@ -28,6 +31,7 @@ public class Door : MonoBehaviour
     private Vector3 pivotWorldPosition;
     private bool isAnimating = false;
     private PlayerController nearbyPlayer;
+    private Transform playerTransform;
 
     void Start()
     {
@@ -46,7 +50,34 @@ public class Door : MonoBehaviour
 
         SetupTrigger();
 
-        Debug.Log($"Puerta configurada - Pivot en: {pivotWorldPosition}");
+        Debug.Log($"Puerta configurada - Pivot en: {pivotWorldPosition}, Distancia interacción: {interactionRange}m");
+    }
+
+    void Update()
+    {
+        // Verificar distancia constantemente si hay un jugador cerca
+        if (nearbyPlayer != null && playerTransform != null)
+        {
+            float distance = Vector3.Distance(transform.position, playerTransform.position);
+
+            // Si el jugador se aleja más de la distancia de interacción
+            if (distance > interactionRange)
+            {
+                nearbyPlayer.HideInteractionMessage();
+            }
+            else
+            {
+                // Mostrar mensaje apropiado según el estado
+                if (isLocked)
+                {
+                    nearbyPlayer.ShowInteractionMessage(lockedMessage);
+                }
+                else
+                {
+                    nearbyPlayer.ShowInteractionMessage(openMessage);
+                }
+            }
+        }
     }
 
     void AutoDetectPivot()
@@ -82,7 +113,8 @@ public class Door : MonoBehaviour
 
             BoxCollider triggerCol = trigger.AddComponent<BoxCollider>();
             triggerCol.isTrigger = true;
-            triggerCol.size = new Vector3(interactionRange, 2f, interactionRange);
+            // Usar triggerSize en lugar de interactionRange para el área de detección
+            triggerCol.size = new Vector3(triggerSize, 2f, triggerSize);
 
             DoorTrigger doorTrigger = trigger.AddComponent<DoorTrigger>();
             doorTrigger.parentDoor = this;
@@ -92,25 +124,42 @@ public class Door : MonoBehaviour
     public void OnPlayerEnter(PlayerController player)
     {
         nearbyPlayer = player;
+        playerTransform = player.transform;
 
-        if (isLocked)
+        // Verificar distancia real antes de mostrar mensaje
+        float distance = Vector3.Distance(transform.position, playerTransform.position);
+
+        if (distance <= interactionRange)
         {
-            player.ShowInteractionMessage(lockedMessage);
-        }
-        else
-        {
-            player.ShowInteractionMessage(openMessage);
+            if (isLocked)
+            {
+                player.ShowInteractionMessage(lockedMessage);
+            }
+            else
+            {
+                player.ShowInteractionMessage(openMessage);
+            }
         }
     }
 
     public void OnPlayerExit(PlayerController player)
     {
         nearbyPlayer = null;
+        playerTransform = null;
         player.HideInteractionMessage();
     }
 
     public void TryInteract(PlayerController player)
     {
+        // Verificar distancia real antes de permitir interacción
+        float distance = Vector3.Distance(transform.position, player.transform.position);
+
+        if (distance > interactionRange)
+        {
+            Debug.Log($"Demasiado lejos para interactuar. Distancia: {distance:F2}m, Máximo: {interactionRange}m");
+            return;
+        }
+
         if (isLocked)
         {
             if (player.HasKey(requiredKeyID))
@@ -195,13 +244,17 @@ public class Door : MonoBehaviour
     {
         Transform pivot = doorPivot != null ? doorPivot : transform;
 
-        // Mostrar rango de interacción
+        // Mostrar rango REAL de interacción (verde)
         Gizmos.color = Color.green;
-        Gizmos.DrawWireCube(transform.position, new Vector3(interactionRange, 2f, interactionRange));
+        Gizmos.DrawWireSphere(transform.position, interactionRange);
+
+        // Mostrar área del trigger (amarillo transparente)
+        Gizmos.color = new Color(1f, 1f, 0f, 0.3f);
+        Gizmos.DrawWireCube(transform.position, new Vector3(triggerSize, 2f, triggerSize));
 
         // Mostrar punto de pivot
         Vector3 pivotPos = Application.isPlaying ? pivotWorldPosition : pivot.TransformPoint(pivotOffset);
-        Gizmos.color = Color.yellow;
+        Gizmos.color = Color.red;
         Gizmos.DrawSphere(pivotPos, 0.15f);
 
         // Mostrar dirección de apertura
@@ -276,7 +329,7 @@ public class Door : MonoBehaviour
     void ReconfigureTrigger()
     {
         SetupTrigger();
-        Debug.Log($"Trigger reconfigurado con rango: {interactionRange}");
+        Debug.Log($"Trigger reconfigurado - Trigger size: {triggerSize}, Interaction range: {interactionRange}");
     }
 
     [ContextMenu("Debug Info")]
@@ -295,6 +348,6 @@ public class Door : MonoBehaviour
         {
             Debug.Log("No se encontró DoorTrigger child object");
         }
-        Debug.Log($"InteractionRange configurado: {interactionRange}");
+        Debug.Log($"Interaction Range: {interactionRange}m, Trigger Size: {triggerSize}m");
     }
 }
