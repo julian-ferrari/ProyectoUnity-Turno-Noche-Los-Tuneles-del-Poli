@@ -25208,6 +25208,7 @@ GameObject:
   - component: {fileID: 438279227}
   - component: {fileID: 438279228}
   - component: {fileID: 438279229}
+  - component: {fileID: 438279230}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -25254,7 +25255,7 @@ Camera:
     y: 0
     width: 1
     height: 1
-  near clip plane: 0.3
+  near clip plane: 0.5
   far clip plane: 1000
   field of view: 60
   orthographic: 0
@@ -25282,14 +25283,14 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 438279223}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.2588191, y: 0, z: 0, w: 0.9659258}
-  m_LocalPosition: {x: 0, y: 5, z: -10}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalRotation: {x: 0.2588191, y: -0, z: -0, w: 0.9659258}
+  m_LocalPosition: {x: 966.1, y: -7.397144, z: -84.5}
+  m_LocalScale: {x: 2, y: 1.5384616, z: 1.8181818}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1576426373}
   - {fileID: 1028001657}
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 1899699427}
   m_LocalEulerAnglesHint: {x: 30, y: 0, z: 0}
 --- !u!114 &438279227
 MonoBehaviour:
@@ -25366,6 +25367,27 @@ MonoBehaviour:
   forceVisible: 1
   flashlightLight: {fileID: 0}
   isLightOn: 0
+--- !u!65 &438279230
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 438279223}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.5, y: 0.2, z: 1.5}
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &438571523
 GameObject:
   m_ObjectHideFlags: 0
@@ -102263,6 +102285,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 889593560}
+  - {fileID: 438279226}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!54 &1899699428
@@ -102308,7 +102331,7 @@ MonoBehaviour:
   runSpeed: 6
   crouchSpeed: 1.5
   jumpForce: 5
-  playerCamera: {fileID: 0}
+  playerCamera: {fileID: 438279225}
   mouseSensitivity: 8
   upDownRange: 60
   normalCameraHeight: 0.8
@@ -121410,7 +121433,6 @@ Material:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 438279226}
   - {fileID: 1901959301}
   - {fileID: 834808871}
   - {fileID: 2070948241}
