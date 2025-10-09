@@ -5,6 +5,7 @@ public class LockpickDoor : MonoBehaviour
 {
     [Header("Configuración")]
     [SerializeField] private Transform teleportDestination;
+    [SerializeField] private Transform interactionPoint;
     [SerializeField] private float interactionDistance = 3f;
     [SerializeField] private float lockpickTime = 5f;
     [SerializeField] private KeyCode interactionKey = KeyCode.E;
@@ -14,16 +15,29 @@ public class LockpickDoor : MonoBehaviour
     [SerializeField] private Text promptText;
     [SerializeField] private Slider progressBar;
 
+    [Header("Sonido")]
+    [SerializeField] private AudioClip lockpickingSound;
+    [SerializeField] private float soundVolume = 1f;
+
     private Transform player;
     private bool playerInRange = false;
     private bool isLockpicking = false;
     private float lockpickProgress = 0f;
     private InventoryManager inventoryManager;
+    private AudioSource audioSource;
 
     void Start()
     {
         player = GameObject.FindGameObjectWithTag("Player").transform;
         inventoryManager = FindFirstObjectByType<InventoryManager>();
+
+        // Configurar AudioSource
+        audioSource = gameObject.AddComponent<AudioSource>();
+        audioSource.playOnAwake = false;
+        audioSource.loop = true;
+        audioSource.volume = soundVolume;
+        if (lockpickingSound != null)
+            audioSource.clip = lockpickingSound;
 
         if (interactionPrompt != null)
             interactionPrompt.SetActive(false);
@@ -40,7 +54,8 @@ public class LockpickDoor : MonoBehaviour
     {
         if (player == null) return;
 
-        float distance = Vector3.Distance(transform.position, player.position);
+        Vector3 checkPosition = interactionPoint != null ? interactionPoint.position : transform.position;
+        float distance = Vector3.Distance(checkPosition, player.position);
         playerInRange = distance <= interactionDistance;
 
         if (playerInRange)
@@ -96,6 +111,10 @@ public class LockpickDoor : MonoBehaviour
             progressBar.gameObject.SetActive(true);
 
         ShowPrompt("Forzando cerradura...");
+
+        // Reproducir sonido
+        if (audioSource != null && lockpickingSound != null)
+            audioSource.Play();
     }
 
     void CancelLockpicking()
@@ -107,6 +126,10 @@ public class LockpickDoor : MonoBehaviour
             progressBar.gameObject.SetActive(false);
 
         ShowPrompt("Mantén E para forzar la cerradura");
+
+        // Detener sonido
+        if (audioSource != null && audioSource.isPlaying)
+            audioSource.Stop();
     }
 
     void UpdateProgressBar()
@@ -121,6 +144,10 @@ public class LockpickDoor : MonoBehaviour
 
         if (progressBar != null)
             progressBar.gameObject.SetActive(false);
+
+        // Detener sonido
+        if (audioSource != null && audioSource.isPlaying)
+            audioSource.Stop();
 
         TeleportPlayer();
 
@@ -169,14 +196,16 @@ public class LockpickDoor : MonoBehaviour
 
     void OnDrawGizmosSelected()
     {
+        Vector3 checkPosition = interactionPoint != null ? interactionPoint.position : transform.position;
+
         Gizmos.color = Color.red;
-        Gizmos.DrawWireSphere(transform.position, interactionDistance);
+        Gizmos.DrawWireSphere(checkPosition, interactionDistance);
 
         if (teleportDestination != null)
         {
             Gizmos.color = Color.green;
             Gizmos.DrawWireSphere(teleportDestination.position, 0.5f);
-            Gizmos.DrawLine(transform.position, teleportDestination.position);
+            Gizmos.DrawLine(checkPosition, teleportDestination.position);
         }
     }
 }
