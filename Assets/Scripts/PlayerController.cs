@@ -37,7 +37,21 @@ public class PlayerController : MonoBehaviour
     [Header("Flashlight")]
     public Light flashlight;
 
-    // REFERENCIA AL MENÚ DE PAUSA - NUEVA
+    [Header("Audio")]
+    public AudioSource audioSource;
+    public AudioSource breathingAudioSource; // AudioSource separado para respiración
+    [Space(5)]
+    public AudioClip[] footstepSounds; // Múltiples sonidos de pasos para variedad
+    public AudioClip breathingSound; // Respiración acelerada
+    [Space(5)]
+    public float footstepInterval = 0.5f; // Intervalo entre pasos al caminar
+    public float runFootstepInterval = 0.3f; // Intervalo entre pasos al correr
+    public float crouchFootstepInterval = 0.7f; // Intervalo entre pasos agachado
+    [Space(5)]
+    public float footstepVolume = 0.5f;
+    public float breathingVolume = 0.3f;
+
+    // REFERENCIA AL MENÚ DE PAUSA
     private PoliNightsPauseMenu pauseMenu;
 
     // Components
@@ -59,9 +73,13 @@ public class PlayerController : MonoBehaviour
     private float originalColliderHeight;
     private Vector3 originalColliderCenter;
 
+    // Audio variables
+    private float footstepTimer = 0f;
+    private bool isMoving = false;
+    private bool wasRunning = false;
+
     void Start()
     {
-        // ENCONTRAR REFERENCIA AL MENÚ DE PAUSA - NUEVO
         pauseMenu = FindFirstObjectByType<PoliNightsPauseMenu>();
         if (pauseMenu == null)
         {
@@ -80,7 +98,7 @@ public class PlayerController : MonoBehaviour
             originalColliderCenter = playerCollider.center;
         }
 
-        // Rigidbody setup MEJORADO
+        // Rigidbody setup
         if (rb != null)
         {
             rb.constraints = RigidbodyConstraints.FreezeRotationX |
@@ -93,6 +111,7 @@ public class PlayerController : MonoBehaviour
         SetupCamera();
         SetupFlashlight();
         SetupGroundCheck();
+        SetupAudio();
 
         // Cursor setup
         Cursor.lockState = CursorLockMode.Locked;
@@ -101,6 +120,41 @@ public class PlayerController : MonoBehaviour
         // Initialize camera height
         targetCameraHeight = normalCameraHeight;
         currentCameraHeight = normalCameraHeight;
+    }
+
+    void SetupAudio()
+    {
+        // Configurar AudioSource principal si no existe
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+            audioSource.spatialBlend = 1f; // 3D sound
+            audioSource.minDistance = 1f;
+            audioSource.maxDistance = 15f;
+            audioSource.rolloffMode = AudioRolloffMode.Linear;
+        }
+
+        // Configurar AudioSource para respiración (separado para que no interfiera con pasos)
+        if (breathingAudioSource == null)
+        {
+            GameObject breathingObj = new GameObject("BreathingAudioSource");
+            breathingObj.transform.SetParent(transform);
+            breathingObj.transform.localPosition = Vector3.zero;
+
+            breathingAudioSource = breathingObj.AddComponent<AudioSource>();
+            breathingAudioSource.spatialBlend = 0f; // 2D sound (suena como si viniera del jugador)
+            breathingAudioSource.loop = true;
+            breathingAudioSource.volume = breathingVolume;
+            breathingAudioSource.playOnAwake = false;
+        }
+
+        // Asignar clip de respiración
+        if (breathingSound != null)
+        {
+            breathingAudioSource.clip = breathingSound;
+        }
+
+        Debug.Log("Sistema de audio del jugador configurado");
     }
 
     void SetupGroundCheck()
@@ -141,58 +195,25 @@ public class PlayerController : MonoBehaviour
     {
         if (playerCamera != null)
         {
-            Debug.Log("=== SETUP LINTERNA ===");
-            Debug.Log("Buscando objetos hijos de la cámara:");
-
-            for (int i = 0; i < playerCamera.transform.childCount; i++)
-            {
-                Transform child = playerCamera.transform.GetChild(i);
-                Debug.Log($"  Hijo {i}: '{child.name}' - Activo: {child.gameObject.activeSelf}");
-
-                Component[] components = child.GetComponents<Component>();
-                foreach (Component comp in components)
-                {
-                    Debug.Log($"    - Componente: {comp.GetType().Name}");
-                }
-            }
-
             flashlight = playerCamera.transform.Find("LuzLinterna")?.GetComponent<Light>();
 
             if (flashlight == null)
             {
-                Debug.LogError("❌ No encontró 'LuzLinterna'! Buscando cualquier Light...");
                 flashlight = playerCamera.GetComponentInChildren<Light>();
-
-                if (flashlight != null)
-                {
-                    Debug.Log($"✅ Encontró Light en: '{flashlight.name}'");
-                }
-                else
-                {
-                    Debug.LogError("❌ No se encontró NINGUNA Light!");
-                }
-            }
-            else
-            {
-                Debug.Log($"✅ Encontró LuzLinterna correctamente: {flashlight.name}");
             }
 
             if (flashlight != null)
             {
                 flashlight.enabled = false;
-                Debug.Log("🔦 Linterna configurada y apagada inicialmente");
             }
-
-            Debug.Log("=== FIN SETUP LINTERNA ===");
         }
     }
 
     void Update()
     {
-        // VERIFICAR SI EL JUEGO ESTÁ PAUSADO - NUEVO
         if (pauseMenu != null && pauseMenu.IsPaused)
         {
-            return; // No procesar input del jugador si está pausado
+            return;
         }
 
         HandleInput();
@@ -201,40 +222,34 @@ public class PlayerController : MonoBehaviour
         UpdateCameraHeight();
         CheckGrounded();
         UpdateInteractionMessage();
+        UpdateAudio(); // Sistema de audio
     }
 
     void HandleInput()
     {
-        // Jump - MEJORADO
         if (Input.GetKeyDown(KeyCode.Space) && isGrounded && !isCrouched)
         {
             HandleJump();
         }
 
-        // Crouch
         if (Input.GetKeyDown(KeyCode.LeftControl))
         {
             HandleCrouch();
         }
 
-        // Flashlight
         if (Input.GetKeyDown(KeyCode.F))
         {
             ToggleFlashlight();
         }
 
-        // Interaction
         if (Input.GetKeyDown(KeyCode.E))
         {
             HandleInteraction();
         }
-
-        // NOTA: NO manejamos ESC aquí porque lo maneja PoliNightsPauseMenu
     }
 
     void HandleMovement()
     {
-        // Obtener input DIRECTAMENTE
         float horizontal = 0f;
         float vertical = 0f;
 
@@ -243,18 +258,22 @@ public class PlayerController : MonoBehaviour
         if (Input.GetKey(KeyCode.A)) horizontal = -1f;
         if (Input.GetKey(KeyCode.D)) horizontal = 1f;
 
-        // Calcular dirección de movimiento
         Vector3 forward = transform.forward;
         Vector3 right = transform.right;
         Vector3 movement = (forward * vertical + right * horizontal).normalized;
 
-        // Determinar velocidad
+        // Determinar si está corriendo
+        bool isRunning = false;
+
         if (movement.magnitude > 0)
         {
+            isMoving = true;
+
             if (Input.GetKey(KeyCode.LeftShift) && !isCrouched)
             {
                 currentSpeed = runSpeed;
                 currentNoiseLevel = 3f;
+                isRunning = true;
             }
             else if (isCrouched)
             {
@@ -269,24 +288,24 @@ public class PlayerController : MonoBehaviour
         }
         else
         {
+            isMoving = false;
             currentNoiseLevel = 0f;
         }
 
-        // Aplicar movimiento SIMPLE Y DIRECTO
+        // Controlar respiración al correr
+        HandleBreathing(isRunning);
+
         Vector3 moveVelocity = movement * currentSpeed;
         rb.linearVelocity = new Vector3(moveVelocity.x, rb.linearVelocity.y, moveVelocity.z);
     }
 
     void HandleMouseLook()
     {
-        // Mouse look
         float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
         float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
 
-        // Rotación horizontal del jugador
         transform.Rotate(0, mouseX, 0);
 
-        // Rotación vertical de la cámara
         verticalRotation -= mouseY;
         verticalRotation = Mathf.Clamp(verticalRotation, -upDownRange, upDownRange);
 
@@ -310,14 +329,11 @@ public class PlayerController : MonoBehaviour
         if (groundCheckPoint != null)
         {
             isGrounded = Physics.CheckSphere(groundCheckPoint.position, groundDistance, groundMask);
-            Debug.DrawLine(groundCheckPoint.position, groundCheckPoint.position + Vector3.down * groundDistance,
-                          isGrounded ? Color.green : Color.red);
         }
         else
         {
             Vector3 rayStart = transform.position + Vector3.up * 0.1f;
             isGrounded = Physics.Raycast(rayStart, Vector3.down, 1.2f, groundMask);
-            Debug.DrawRay(rayStart, Vector3.down * 1.2f, isGrounded ? Color.green : Color.red);
         }
     }
 
@@ -327,7 +343,6 @@ public class PlayerController : MonoBehaviour
         rb.linearVelocity = new Vector3(currentVelocity.x, 0f, currentVelocity.z);
         rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
         currentNoiseLevel = 2f;
-        Debug.Log($"¡SALTANDO! Fuerza aplicada: {jumpForce}, isGrounded: {isGrounded}");
     }
 
     void HandleCrouch()
@@ -354,34 +369,13 @@ public class PlayerController : MonoBehaviour
                 playerCollider.center = originalColliderCenter;
             }
         }
-
-        Debug.Log("Crouch: " + isCrouched);
     }
 
     void ToggleFlashlight()
     {
-        Debug.Log("=== TOGGLE LINTERNA ===");
-
         if (flashlight != null)
         {
             flashlight.enabled = !flashlight.enabled;
-            Debug.Log($"🔦 Linterna {(flashlight.enabled ? "ENCENDIDA" : "APAGADA")}");
-
-            Debug.Log("Objetos en la cámara después del toggle:");
-            for (int i = 0; i < playerCamera.transform.childCount; i++)
-            {
-                Transform child = playerCamera.transform.GetChild(i);
-                bool hasRenderer = child.GetComponent<Renderer>() != null;
-                bool hasLight = child.GetComponent<Light>() != null;
-
-                Debug.Log($"  {child.name}: Activo={child.gameObject.activeSelf}, Renderer={hasRenderer}, Light={hasLight}");
-
-                if (hasRenderer)
-                {
-                    Renderer rend = child.GetComponent<Renderer>();
-                    Debug.Log($"    Renderer enabled: {rend.enabled}");
-                }
-            }
 
             foreach (Transform child in playerCamera.transform)
             {
@@ -393,51 +387,20 @@ public class PlayerController : MonoBehaviour
                     if (rend != null)
                     {
                         rend.enabled = true;
-                        Debug.Log($"✅ Forzado visible: {child.name}");
                     }
 
                     MeshRenderer mesh = child.GetComponent<MeshRenderer>();
                     if (mesh != null)
                     {
                         mesh.enabled = true;
-                        Debug.Log($"✅ MeshRenderer enabled: {child.name}");
                     }
                 }
             }
         }
         else
         {
-            Debug.LogError("❌ flashlight es NULL!");
-            Debug.Log("Intentando encontrar la luz nuevamente...");
             SetupFlashlight();
         }
-
-        Debug.Log("=== FIN TOGGLE LINTERNA ===");
-    }
-
-    Transform FindFlashlightModel(Transform parent)
-    {
-        string[] possibleNames = { "modelo de la linterna", "linterna", "Linterna", "FlashlightModel", "Flashlight_Model" };
-
-        foreach (string name in possibleNames)
-        {
-            Transform found = parent.Find(name);
-            if (found != null && found != flashlight.transform)
-            {
-                return found;
-            }
-        }
-
-        for (int i = 0; i < parent.childCount; i++)
-        {
-            Transform child = parent.GetChild(i);
-            if (child.GetComponent<Light>() == null)
-            {
-                return child;
-            }
-        }
-
-        return null;
     }
 
     void HandleInteraction()
@@ -467,9 +430,100 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    // ===================== SISTEMA DE AUDIO =====================
+
+    void UpdateAudio()
+    {
+        // Solo reproducir pasos si está en el suelo y moviéndose
+        if (isGrounded && isMoving)
+        {
+            PlayFootsteps();
+        }
+        else
+        {
+            footstepTimer = 0f;
+        }
+    }
+
+    void PlayFootsteps()
+    {
+        if (footstepSounds == null || footstepSounds.Length == 0) return;
+
+        footstepTimer += Time.deltaTime;
+
+        // Determinar intervalo según el tipo de movimiento
+        float currentInterval = footstepInterval;
+        if (Input.GetKey(KeyCode.LeftShift) && !isCrouched)
+        {
+            currentInterval = runFootstepInterval;
+        }
+        else if (isCrouched)
+        {
+            currentInterval = crouchFootstepInterval;
+        }
+
+        // Reproducir sonido de paso
+        if (footstepTimer >= currentInterval)
+        {
+            footstepTimer = 0f;
+
+            // Elegir un sonido aleatorio de pasos
+            AudioClip footstep = footstepSounds[Random.Range(0, footstepSounds.Length)];
+
+            if (audioSource != null && footstep != null)
+            {
+                audioSource.pitch = Random.Range(0.9f, 1.1f); // Variar tono ligeramente
+                audioSource.PlayOneShot(footstep, footstepVolume);
+            }
+        }
+    }
+
+    void HandleBreathing(bool isRunning)
+    {
+        if (breathingAudioSource == null || breathingSound == null) return;
+
+        // Activar respiración acelerada al correr
+        if (isRunning && !wasRunning)
+        {
+            // Empezar a respirar aceleradamente
+            breathingAudioSource.Play();
+            wasRunning = true;
+        }
+        else if (!isRunning && wasRunning)
+        {
+            // Detener respiración con fade out suave
+            StartCoroutine(FadeOutBreathing());
+            wasRunning = false;
+        }
+
+        // Ajustar volumen según velocidad
+        if (isRunning && breathingAudioSource.isPlaying)
+        {
+            breathingAudioSource.volume = Mathf.Lerp(breathingAudioSource.volume, breathingVolume, Time.deltaTime * 2f);
+        }
+    }
+
+    System.Collections.IEnumerator FadeOutBreathing()
+    {
+        float startVolume = breathingAudioSource.volume;
+        float fadeTime = 1f;
+        float elapsed = 0f;
+
+        while (elapsed < fadeTime)
+        {
+            elapsed += Time.deltaTime;
+            breathingAudioSource.volume = Mathf.Lerp(startVolume, 0f, elapsed / fadeTime);
+            yield return null;
+        }
+
+        breathingAudioSource.Stop();
+        breathingAudioSource.volume = breathingVolume;
+    }
+
+    // ===================== FIN SISTEMA DE AUDIO =====================
+
     void OnApplicationFocus(bool hasFocus)
     {
-        // SOLO configurar cursor si NO está pausado - MODIFICADO
         if (hasFocus && (pauseMenu == null || !pauseMenu.IsPaused))
         {
             Cursor.lockState = CursorLockMode.Locked;
@@ -477,7 +531,6 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    // Métodos públicos para inventario y mensajes
     public void PickupKey(KeyItem key)
     {
         if (keys.Count < maxKeys)
@@ -520,19 +573,13 @@ public class PlayerController : MonoBehaviour
         messageTimer = 0f;
     }
 
-    // MÉTODO PÚBLICO PARA EL MENÚ DE PAUSA - NUEVO
     public void OnGamePaused()
     {
-        // Método llamado cuando el juego se pausa
-        // Aquí puedes agregar lógica específica del jugador al pausar
         Debug.Log("PlayerController: Juego pausado");
     }
 
-    // MÉTODO PÚBLICO PARA EL MENÚ DE PAUSA - NUEVO
     public void OnGameResumed()
     {
-        // Método llamado cuando el juego se reanuda
-        // Restaurar configuración del cursor si es necesario
         if (Application.isFocused)
         {
             Cursor.lockState = CursorLockMode.Locked;

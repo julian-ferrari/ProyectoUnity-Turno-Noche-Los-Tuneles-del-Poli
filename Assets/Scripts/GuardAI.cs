@@ -33,6 +33,21 @@ public class GuardAI : MonoBehaviour
     public AudioClip[] alertSounds;
     public AudioClip[] patrolSounds;
 
+    [Header("Audio - Nuevo Sistema")]
+    public AudioSource coughAudioSource; // AudioSource separado para tos
+    public AudioSource chaseAudioSource; // AudioSource separado para música de persecución
+    [Space(5)]
+    public AudioClip[] coughSounds; // Sonidos de tos
+    public AudioClip chaseMusic; // Música de persecución
+    public AudioClip captureSound; // Sonido al atrapar jugador
+    [Space(5)]
+    public float minCoughInterval = 5f;
+    public float maxCoughInterval = 10f;
+    public float coughDetectionRange = 10f; // Distancia a la que el jugador puede oír la tos
+    [Space(5)]
+    public float chaseMusicVolume = 0.6f;
+    public float chaseMusicFadeTime = 1f;
+
     [Header("Patrol Improvements")]
     public bool loopPatrol = true;
     public bool randomPatrol = false;
@@ -59,6 +74,10 @@ public class GuardAI : MonoBehaviour
     private Quaternion initialRotation;
     private int initialPatrolIndex;
 
+    // Variables de audio
+    private float nextCoughTime = 0f;
+    private bool isChasingWithMusic = false;
+
     public enum GuardState { Patrolling, Investigating, Chasing, Searching, Returning }
     public GuardState currentState = GuardState.Patrolling;
     private GuardState previousState;
@@ -82,17 +101,59 @@ public class GuardAI : MonoBehaviour
             CreateBasicPatrolPoints();
         }
 
+        SetupAudio();
         StartCoroutine(SuspicionDecay());
+        ScheduleNextCough();
+    }
+
+    void SetupAudio()
+    {
+        // Configurar AudioSource para tos (3D espacial)
+        if (coughAudioSource == null)
+        {
+            GameObject coughObj = new GameObject("CoughAudioSource");
+            coughObj.transform.SetParent(transform);
+            coughObj.transform.localPosition = Vector3.zero;
+
+            coughAudioSource = coughObj.AddComponent<AudioSource>();
+            coughAudioSource.spatialBlend = 1f; // 3D sound
+            coughAudioSource.minDistance = 5f;
+            coughAudioSource.maxDistance = coughDetectionRange;
+            coughAudioSource.rolloffMode = AudioRolloffMode.Linear;
+            coughAudioSource.playOnAwake = false;
+        }
+
+        // Configurar AudioSource para música de persecución (2D)
+        if (chaseAudioSource == null)
+        {
+            GameObject chaseObj = new GameObject("ChaseAudioSource");
+            chaseObj.transform.SetParent(transform);
+            chaseObj.transform.localPosition = Vector3.zero;
+
+            chaseAudioSource = chaseObj.AddComponent<AudioSource>();
+            chaseAudioSource.spatialBlend = 0f; // 2D sound (música ambiental)
+            chaseAudioSource.loop = true;
+            chaseAudioSource.volume = 0f; // Empezar en silencio
+            chaseAudioSource.playOnAwake = false;
+        }
+
+        // Asignar música de persecución
+        if (chaseMusic != null)
+        {
+            chaseAudioSource.clip = chaseMusic;
+        }
+
+        Debug.Log("Sistema de audio del guardia configurado");
     }
 
     void Update()
     {
-        // Solo procesar inputs de prueba en el editor o con debug activado
 #if UNITY_EDITOR
         TestInputs();
 #endif
 
         UpdateAlertness();
+        UpdateCoughSystem();
 
         switch (currentState)
         {
@@ -119,6 +180,7 @@ public class GuardAI : MonoBehaviour
         }
 
         UpdateAnimations();
+        UpdateChaseMusic();
     }
 
     void TestInputs()
@@ -144,33 +206,93 @@ public class GuardAI : MonoBehaviour
         }
     }
 
-    public void TestGuardBehavior()
-    {
-        Debug.Log("=== INICIANDO PRUEBAS DEL GUARDIA ===");
-        Debug.Log("Estado actual: " + currentState);
-        Debug.Log("Nivel de alerta: " + alertnessLevel);
-        Debug.Log("Puntos de patrulla: " + patrolPoints.Length);
+    // ===================== SISTEMA DE AUDIO =====================
 
-        StartCoroutine(TestSequence());
+    void UpdateCoughSystem()
+    {
+        // Solo toser si el jugador está cerca
+        float distanceToPlayer = Vector3.Distance(transform.position, player.position);
+
+        if (distanceToPlayer <= coughDetectionRange && Time.time >= nextCoughTime)
+        {
+            PlayCough();
+            ScheduleNextCough();
+        }
     }
 
-    IEnumerator TestSequence()
+    void PlayCough()
     {
-        Debug.Log("Probando transición a Investigación...");
-        StartInvestigating(player.position + new Vector3(5, 0, 5));
+        if (coughSounds == null || coughSounds.Length == 0 || coughAudioSource == null) return;
 
-        yield return new WaitForSeconds(3f);
+        AudioClip cough = coughSounds[Random.Range(0, coughSounds.Length)];
+        coughAudioSource.PlayOneShot(cough);
 
-        Debug.Log("Probando transición a Persecución...");
-        StartChasing();
-
-        yield return new WaitForSeconds(5f);
-
-        Debug.Log("Probando reset del guardia...");
-        ResetGuard();
-
-        Debug.Log("=== PRUEBAS COMPLETADAS ===");
+        Debug.Log("Guardia tosió - Jugador puede oírlo");
     }
+
+    void ScheduleNextCough()
+    {
+        float interval = Random.Range(minCoughInterval, maxCoughInterval);
+        nextCoughTime = Time.time + interval;
+    }
+
+    void UpdateChaseMusic()
+    {
+        // Activar música durante persecución
+        if (currentState == GuardState.Chasing && !isChasingWithMusic)
+        {
+            StartCoroutine(FadeInChaseMusic());
+            isChasingWithMusic = true;
+        }
+        // Desactivar música cuando deja de perseguir
+        else if (currentState != GuardState.Chasing && isChasingWithMusic)
+        {
+            StartCoroutine(FadeOutChaseMusic());
+            isChasingWithMusic = false;
+        }
+    }
+
+    IEnumerator FadeInChaseMusic()
+    {
+        if (chaseAudioSource == null || chaseMusic == null) yield break;
+
+        if (!chaseAudioSource.isPlaying)
+        {
+            chaseAudioSource.Play();
+        }
+
+        float elapsed = 0f;
+        float startVolume = chaseAudioSource.volume;
+
+        while (elapsed < chaseMusicFadeTime)
+        {
+            elapsed += Time.deltaTime;
+            chaseAudioSource.volume = Mathf.Lerp(startVolume, chaseMusicVolume, elapsed / chaseMusicFadeTime);
+            yield return null;
+        }
+
+        chaseAudioSource.volume = chaseMusicVolume;
+    }
+
+    IEnumerator FadeOutChaseMusic()
+    {
+        if (chaseAudioSource == null) yield break;
+
+        float elapsed = 0f;
+        float startVolume = chaseAudioSource.volume;
+
+        while (elapsed < chaseMusicFadeTime)
+        {
+            elapsed += Time.deltaTime;
+            chaseAudioSource.volume = Mathf.Lerp(startVolume, 0f, elapsed / chaseMusicFadeTime);
+            yield return null;
+        }
+
+        chaseAudioSource.volume = 0f;
+        chaseAudioSource.Stop();
+    }
+
+    // ===================== FIN SISTEMA DE AUDIO =====================
 
     void UpdateAlertness()
     {
@@ -449,11 +571,33 @@ public class GuardAI : MonoBehaviour
     void CapturePlayer()
     {
         Debug.Log("¡Te atrapé! Reiniciando...");
+
+        // Reproducir sonido de captura
+        if (captureSound != null && audioSource != null)
+        {
+            audioSource.PlayOneShot(captureSound);
+        }
+
+        // Detener música de persecución inmediatamente
+        if (chaseAudioSource != null && chaseAudioSource.isPlaying)
+        {
+            chaseAudioSource.Stop();
+            chaseAudioSource.volume = 0f;
+        }
+        isChasingWithMusic = false;
+
         GameManager gameManager = FindFirstObjectByType<GameManager>();
         if (gameManager != null)
         {
-            gameManager.RestartNight();
+            // Pequeño delay para que se escuche el sonido de captura
+            StartCoroutine(RestartAfterCapture(gameManager));
         }
+    }
+
+    IEnumerator RestartAfterCapture(GameManager gameManager)
+    {
+        yield return new WaitForSeconds(1.5f);
+        gameManager.RestartNight();
     }
 
     void MoveTowards(Vector3 target, float speed)
@@ -584,6 +728,14 @@ public class GuardAI : MonoBehaviour
         hasSeenPlayer = false;
         alertnessLevel = 0f;
 
+        // Detener música de persecución
+        if (chaseAudioSource != null && chaseAudioSource.isPlaying)
+        {
+            chaseAudioSource.Stop();
+            chaseAudioSource.volume = 0f;
+        }
+        isChasingWithMusic = false;
+
         Rigidbody rb = GetComponent<Rigidbody>();
         if (rb != null)
         {
@@ -632,6 +784,10 @@ public class GuardAI : MonoBehaviour
         Gizmos.color = Color.blue;
         Gizmos.DrawWireSphere(transform.position, minChaseDistance);
 
+        // Mostrar rango de tos
+        Gizmos.color = new Color(0, 1, 0, 0.2f);
+        Gizmos.DrawWireSphere(transform.position, coughDetectionRange);
+
         Gizmos.color = new Color(0, 1, 1, 0.2f);
         Vector3 leftBoundary = Quaternion.AngleAxis(-fieldOfViewAngle / 2, Vector3.up) * transform.forward * detectionRange;
         Vector3 rightBoundary = Quaternion.AngleAxis(fieldOfViewAngle / 2, Vector3.up) * transform.forward * detectionRange;
@@ -659,7 +815,8 @@ public class GuardAI : MonoBehaviour
 
             case GuardState.Chasing:
                 Gizmos.color = Color.red;
-                Gizmos.DrawLine(transform.position, player.position);
+                if (player != null)
+                    Gizmos.DrawLine(transform.position, player.position);
                 break;
 
             case GuardState.Searching:
