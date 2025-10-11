@@ -26,6 +26,17 @@ public class Door : MonoBehaviour
     public string openMessage = "Presiona E para abrir/cerrar";
     public string unlockMessage = "¡Puerta desbloqueada!";
 
+    [Header("Audio")]
+    public AudioSource audioSource;
+    [Space(5)]
+    public AudioClip doorOpenSound; // Sonido de puerta abriéndose normalmente
+    public AudioClip doorCloseSound; // Sonido de puerta cerrándose
+    public AudioClip doorUnlockSound; // Sonido al desbloquear con llave
+    public AudioClip doorLockedSound; // Sonido al intentar abrir puerta cerrada
+    [Space(5)]
+    public float doorSoundVolume = 0.7f;
+    public float unlockSoundVolume = 0.8f;
+
     private Vector3 originalPosition;
     private Quaternion originalRotation;
     private Vector3 pivotWorldPosition;
@@ -49,8 +60,25 @@ public class Door : MonoBehaviour
         pivotWorldPosition = doorPivot.TransformPoint(pivotOffset);
 
         SetupTrigger();
+        SetupAudio();
 
         Debug.Log($"Puerta configurada - Pivot en: {pivotWorldPosition}, Distancia interacción: {interactionRange}m");
+    }
+
+    void SetupAudio()
+    {
+        // Configurar AudioSource si no existe
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+            audioSource.spatialBlend = 1f; // 3D sound
+            audioSource.minDistance = 3f;
+            audioSource.maxDistance = 15f;
+            audioSource.rolloffMode = AudioRolloffMode.Linear;
+            audioSource.playOnAwake = false;
+        }
+
+        Debug.Log("Sistema de audio de puerta configurado");
     }
 
     void Update()
@@ -168,6 +196,9 @@ public class Door : MonoBehaviour
             }
             else
             {
+                // Reproducir sonido de puerta cerrada
+                PlaySound(doorLockedSound, doorSoundVolume);
+
                 Debug.Log("No tienes la llave correcta!");
                 player.ShowInteractionMessage("No tienes la llave correcta!");
             }
@@ -184,6 +215,9 @@ public class Door : MonoBehaviour
         player.UseKey(requiredKeyID);
         player.ShowInteractionMessage(unlockMessage);
 
+        // Reproducir sonido de desbloqueo con llave
+        PlaySound(doorUnlockSound, unlockSoundVolume);
+
         Debug.Log("¡Puerta desbloqueada con " + requiredKeyID + "!");
 
         Invoke("ToggleDoor", 0.5f);
@@ -194,7 +228,26 @@ public class Door : MonoBehaviour
         if (!isAnimating)
         {
             isOpen = !isOpen;
+
+            // Reproducir sonido apropiado
+            if (isOpen)
+            {
+                PlaySound(doorOpenSound, doorSoundVolume);
+            }
+            else
+            {
+                PlaySound(doorCloseSound, doorSoundVolume);
+            }
+
             StartCoroutine(AnimateDoor());
+        }
+    }
+
+    void PlaySound(AudioClip clip, float volume)
+    {
+        if (audioSource != null && clip != null)
+        {
+            audioSource.PlayOneShot(clip, volume);
         }
     }
 

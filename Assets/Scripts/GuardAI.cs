@@ -9,15 +9,15 @@ public class GuardAI : MonoBehaviour
     public float waitTime = 2f;
 
     [Header("Detection")]
-    public float detectionRange = 5f;
-    public float hearingRange = 8f;
-    public float fieldOfViewAngle = 60f;
+    public float detectionRange = 10f;
+    public float hearingRange = 12f;
+    public float fieldOfViewAngle = 90f;
 
     [Header("Chasing")]
     public float chaseSpeed = 4f;
     public float investigateTime = 10f;
     public float maxChaseDistance = 20f;
-    public float minChaseDistance = 2f;
+    public float captureDistance = 1.5f;
     public float losePlayerTime = 5f;
 
     [Header("AI Behavior")]
@@ -34,16 +34,16 @@ public class GuardAI : MonoBehaviour
     public AudioClip[] patrolSounds;
 
     [Header("Audio - Nuevo Sistema")]
-    public AudioSource coughAudioSource; // AudioSource separado para tos
-    public AudioSource chaseAudioSource; // AudioSource separado para música de persecución
+    public AudioSource coughAudioSource;
+    public AudioSource chaseAudioSource;
     [Space(5)]
-    public AudioClip[] coughSounds; // Sonidos de tos
-    public AudioClip chaseMusic; // Música de persecución
-    public AudioClip captureSound; // Sonido al atrapar jugador
+    public AudioClip[] coughSounds;
+    public AudioClip chaseMusic;
+    public AudioClip captureSound;
     [Space(5)]
     public float minCoughInterval = 5f;
     public float maxCoughInterval = 10f;
-    public float coughDetectionRange = 10f; // Distancia a la que el jugador puede oír la tos
+    public float coughDetectionRange = 10f;
     [Space(5)]
     public float chaseMusicVolume = 0.6f;
     public float chaseMusicFadeTime = 1f;
@@ -55,9 +55,11 @@ public class GuardAI : MonoBehaviour
 
     [Header("Debug & Testing")]
     public bool debugMode = true;
+    public bool showDetailedLogs = true;
     public KeyCode testDetectionKey = KeyCode.T;
     public KeyCode resetGuardKey = KeyCode.R;
     public KeyCode togglePatrolKey = KeyCode.P;
+    public KeyCode forceChaseKey = KeyCode.C;
 
     private int currentPatrolIndex = 0;
     private float waitTimer = 0f;
@@ -74,11 +76,12 @@ public class GuardAI : MonoBehaviour
     private Quaternion initialRotation;
     private int initialPatrolIndex;
 
-    // Variables de audio
     private float nextCoughTime = 0f;
     private bool isChasingWithMusic = false;
+    private bool isCapturing = false; // NUEVO: Flag para saber si está capturando
+    private Coroutine chaseMusicCoroutine = null; // NUEVO: Referencia a la corrutina activa
 
-    public enum GuardState { Patrolling, Investigating, Chasing, Searching, Returning }
+    public enum GuardState { Patrolling, Investigating, Chasing, Searching, Returning, Capturing }
     public GuardState currentState = GuardState.Patrolling;
     private GuardState previousState;
 
@@ -108,7 +111,6 @@ public class GuardAI : MonoBehaviour
 
     void SetupAudio()
     {
-        // Configurar AudioSource para tos (3D espacial)
         if (coughAudioSource == null)
         {
             GameObject coughObj = new GameObject("CoughAudioSource");
@@ -116,14 +118,13 @@ public class GuardAI : MonoBehaviour
             coughObj.transform.localPosition = Vector3.zero;
 
             coughAudioSource = coughObj.AddComponent<AudioSource>();
-            coughAudioSource.spatialBlend = 1f; // 3D sound
+            coughAudioSource.spatialBlend = 1f;
             coughAudioSource.minDistance = 5f;
             coughAudioSource.maxDistance = coughDetectionRange;
             coughAudioSource.rolloffMode = AudioRolloffMode.Linear;
             coughAudioSource.playOnAwake = false;
         }
 
-        // Configurar AudioSource para música de persecución (2D)
         if (chaseAudioSource == null)
         {
             GameObject chaseObj = new GameObject("ChaseAudioSource");
@@ -131,13 +132,12 @@ public class GuardAI : MonoBehaviour
             chaseObj.transform.localPosition = Vector3.zero;
 
             chaseAudioSource = chaseObj.AddComponent<AudioSource>();
-            chaseAudioSource.spatialBlend = 0f; // 2D sound (música ambiental)
+            chaseAudioSource.spatialBlend = 0f;
             chaseAudioSource.loop = true;
-            chaseAudioSource.volume = 0f; // Empezar en silencio
+            chaseAudioSource.volume = 0f;
             chaseAudioSource.playOnAwake = false;
         }
 
-        // Asignar música de persecución
         if (chaseMusic != null)
         {
             chaseAudioSource.clip = chaseMusic;
@@ -151,6 +151,12 @@ public class GuardAI : MonoBehaviour
 #if UNITY_EDITOR
         TestInputs();
 #endif
+
+        // Si está capturando, no hacer nada más
+        if (isCapturing)
+        {
+            return;
+        }
 
         UpdateAlertness();
         UpdateCoughSystem();
@@ -177,6 +183,10 @@ public class GuardAI : MonoBehaviour
             case GuardState.Returning:
                 ReturnToPatrol();
                 break;
+
+            case GuardState.Capturing:
+                // No hacer nada, la captura se maneja en CapturePlayer
+                break;
         }
 
         UpdateAnimations();
@@ -189,28 +199,31 @@ public class GuardAI : MonoBehaviour
 
         if (Input.GetKeyDown(testDetectionKey))
         {
-            Debug.Log("TEST: Forzando detección del jugador");
+            Debug.Log($"[{gameObject.name}] TEST: Forzando detección del jugador");
             StartChasing();
         }
 
         if (Input.GetKeyDown(resetGuardKey))
         {
-            Debug.Log("TEST: Reseteando guardia");
+            Debug.Log($"[{gameObject.name}] TEST: Reseteando guardia");
             ResetGuard();
         }
 
         if (Input.GetKeyDown(togglePatrolKey))
         {
             patrolEnabled = !patrolEnabled;
-            Debug.Log("TEST: Patrulla " + (patrolEnabled ? "activada" : "desactivada"));
+            Debug.Log($"[{gameObject.name}] TEST: Patrulla " + (patrolEnabled ? "activada" : "desactivada"));
+        }
+
+        if (Input.GetKeyDown(forceChaseKey))
+        {
+            Debug.Log($"[{gameObject.name}] TEST: FORZANDO PERSECUCIÓN DIRECTA");
+            StartChasing();
         }
     }
 
-    // ===================== SISTEMA DE AUDIO =====================
-
     void UpdateCoughSystem()
     {
-        // Solo toser si el jugador está cerca
         float distanceToPlayer = Vector3.Distance(transform.position, player.position);
 
         if (distanceToPlayer <= coughDetectionRange && Time.time >= nextCoughTime)
@@ -227,7 +240,8 @@ public class GuardAI : MonoBehaviour
         AudioClip cough = coughSounds[Random.Range(0, coughSounds.Length)];
         coughAudioSource.PlayOneShot(cough);
 
-        Debug.Log("Guardia tosió - Jugador puede oírlo");
+        if (showDetailedLogs)
+            Debug.Log("Guardia tosió - Jugador puede oírlo");
     }
 
     void ScheduleNextCough()
@@ -241,24 +255,46 @@ public class GuardAI : MonoBehaviour
         // Activar música durante persecución
         if (currentState == GuardState.Chasing && !isChasingWithMusic)
         {
-            StartCoroutine(FadeInChaseMusic());
+            // Cancelar fade out anterior si existe
+            if (chaseMusicCoroutine != null)
+            {
+                StopCoroutine(chaseMusicCoroutine);
+            }
+            chaseMusicCoroutine = StartCoroutine(FadeInChaseMusic());
             isChasingWithMusic = true;
+
+            if (showDetailedLogs)
+                Debug.Log("<color=cyan>MÚSICA DE PERSECUCIÓN ACTIVADA</color>");
         }
         // Desactivar música cuando deja de perseguir
         else if (currentState != GuardState.Chasing && isChasingWithMusic)
         {
-            StartCoroutine(FadeOutChaseMusic());
+            // Cancelar fade in anterior si existe
+            if (chaseMusicCoroutine != null)
+            {
+                StopCoroutine(chaseMusicCoroutine);
+            }
+            chaseMusicCoroutine = StartCoroutine(FadeOutChaseMusic());
             isChasingWithMusic = false;
+
+            if (showDetailedLogs)
+                Debug.Log("<color=cyan>MÚSICA DE PERSECUCIÓN DESACTIVADA</color>");
         }
     }
 
     IEnumerator FadeInChaseMusic()
     {
-        if (chaseAudioSource == null || chaseMusic == null) yield break;
+        if (chaseAudioSource == null || chaseMusic == null)
+        {
+            Debug.LogWarning("No se puede reproducir música de persecución: chaseAudioSource o chaseMusic es null");
+            yield break;
+        }
 
         if (!chaseAudioSource.isPlaying)
         {
+            chaseAudioSource.volume = 0f;
             chaseAudioSource.Play();
+            Debug.Log("Reproduciendo música de persecución");
         }
 
         float elapsed = 0f;
@@ -291,8 +327,6 @@ public class GuardAI : MonoBehaviour
         chaseAudioSource.volume = 0f;
         chaseAudioSource.Stop();
     }
-
-    // ===================== FIN SISTEMA DE AUDIO =====================
 
     void UpdateAlertness()
     {
@@ -356,69 +390,119 @@ public class GuardAI : MonoBehaviour
 
     void CheckForPlayer()
     {
+        if (player == null)
+        {
+            Debug.LogError("Player es NULL en CheckForPlayer!");
+            return;
+        }
+
         float distanceToPlayer = Vector3.Distance(transform.position, player.position);
         bool playerDetected = false;
 
+        // DETECCIÓN VISUAL
         if (distanceToPlayer <= detectionRange)
         {
             Vector3 directionToPlayer = (player.position - transform.position).normalized;
             float angleToPlayer = Vector3.Angle(transform.forward, directionToPlayer);
 
+            if (showDetailedLogs)
+                Debug.Log($"[{gameObject.name}] Checando jugador - Distancia: {distanceToPlayer:F2}m, Ángulo: {angleToPlayer:F1}°");
+
             if (angleToPlayer < fieldOfViewAngle / 2f)
             {
                 RaycastHit hit;
-                if (Physics.Raycast(transform.position + Vector3.up, directionToPlayer, out hit, detectionRange))
+                Vector3 rayStart = transform.position + Vector3.up * 1.5f;
+
+                if (Physics.Raycast(rayStart, directionToPlayer, out hit, detectionRange))
                 {
+                    Debug.DrawRay(rayStart, directionToPlayer * hit.distance,
+                                 hit.collider.CompareTag("Player") ? Color.green : Color.red, 0.5f);
+
+                    if (showDetailedLogs)
+                        Debug.Log($"[{gameObject.name}] Raycast hit: {hit.collider.name}, Tag: {hit.collider.tag}");
+
                     if (hit.collider.CompareTag("Player"))
                     {
                         float detectionChance = CalculateDetectionChance();
-                        if (Random.value < detectionChance)
+                        float randomValue = Random.value;
+
+                        if (showDetailedLogs)
+                            Debug.Log($"[{gameObject.name}] Chance: {detectionChance:F2}, Random: {randomValue:F2}");
+
+                        if (currentState == GuardState.Investigating)
+                        {
+                            detectionChance += 0.3f;
+                        }
+
+                        if (randomValue < detectionChance)
                         {
                             playerDetected = true;
+                            Debug.Log($"<color=red>[{gameObject.name}] ¡¡¡JUGADOR DETECTADO VISUALMENTE!!!</color>");
                         }
                     }
                 }
             }
         }
 
-        if (canSeeFlashlight && distanceToPlayer <= detectionRange * 1.5f)
+        // DETECCIÓN DE LINTERNA
+        if (canSeeFlashlight && distanceToPlayer <= detectionRange * 2f)
         {
             Light flashlight = player.GetComponentInChildren<Light>();
-            if (flashlight != null && flashlight.enabled)
+            if (flashlight != null && flashlight.enabled && flashlight.intensity > 0)
             {
                 Vector3 directionToPlayer = (player.position - transform.position).normalized;
-                if (Vector3.Dot(transform.forward, directionToPlayer) > 0.3f)
+                float dot = Vector3.Dot(transform.forward, directionToPlayer);
+
+                if (dot > 0.1f)
                 {
                     playerDetected = true;
+                    Debug.Log($"<color=yellow>[{gameObject.name}] ¡Linterna detectada!</color>");
                 }
             }
         }
 
+        // DETECCIÓN DE SONIDO
         if (canHearFootsteps && distanceToPlayer <= hearingRange)
         {
-            float noiseThreshold = 0.5f;
-            if (alertnessLevel > 50f) noiseThreshold = 0.2f;
+            float noiseThreshold = 0.3f;
+            if (alertnessLevel > 50f) noiseThreshold = 0.1f;
 
-            if (playerController.currentNoiseLevel > noiseThreshold)
+            if (playerController != null && playerController.currentNoiseLevel > noiseThreshold)
             {
-                StartInvestigating(player.position);
-                return;
+                Debug.Log($"<color=orange>[{gameObject.name}] ¡Ruido detectado!</color> Nivel: {playerController.currentNoiseLevel:F2}");
+
+                // Si ya está investigando y escucha ruido, detectar directamente
+                if (currentState == GuardState.Investigating)
+                {
+                    playerDetected = true;
+                    Debug.Log($"<color=red>[{gameObject.name}] Investigando + ruido = DETECCIÓN DIRECTA</color>");
+                }
+                else
+                {
+                    StartInvestigating(player.position);
+                }
             }
         }
 
         if (playerDetected)
         {
+            Debug.Log($"<color=red>[{gameObject.name}] ========= INICIANDO PERSECUCIÓN =========</color>");
             StartChasing();
         }
     }
 
     float CalculateDetectionChance()
     {
-        float baseChance = 0.8f;
+        float baseChance = 0.7f;
 
-        if (playerController.currentNoiseLevel < 1f) baseChance -= 0.3f;
+        if (playerController != null)
+        {
+            if (playerController.currentNoiseLevel < 0.5f) baseChance += 0.1f;
+            if (playerController.currentNoiseLevel > 2f) baseChance += 0.2f;
+        }
+
         if (alertnessLevel > 50f) baseChance += 0.2f;
-        if (playerController.currentNoiseLevel > 2f) baseChance += 0.3f;
+        if (alertnessLevel > 80f) baseChance += 0.1f;
 
         return Mathf.Clamp01(baseChance);
     }
@@ -433,12 +517,15 @@ public class GuardAI : MonoBehaviour
         investigateTimer = 0f;
         alertnessLevel = Mathf.Min(100f, alertnessLevel + 25f);
 
-        Debug.Log("¿Qué fue eso? Voy a investigar...");
+        Debug.Log($"[{gameObject.name}] ¿Qué fue eso? Voy a investigar en {position}. Alerta: {alertnessLevel}%");
     }
 
     void Investigate()
     {
         float distance = Vector3.Distance(transform.position, investigatePosition);
+
+        if (showDetailedLogs)
+            Debug.Log($"[{gameObject.name}] Investigando - Distancia al punto: {distance:F2}m, Timer: {investigateTimer:F1}s");
 
         if (distance > 1f)
         {
@@ -451,14 +538,20 @@ public class GuardAI : MonoBehaviour
 
             if (investigateTimer >= investigateTime)
             {
+                Debug.Log($"[{gameObject.name}] Tiempo de investigación terminado");
+
                 if (hasSeenPlayer)
                 {
                     currentState = GuardState.Searching;
+                    Debug.Log($"[{gameObject.name}] Cambiando a SEARCHING");
                 }
                 else
                 {
                     currentState = previousState;
+                    Debug.Log($"[{gameObject.name}] Volviendo a estado anterior: {previousState}");
                 }
+
+                investigateTimer = 0f;
             }
         }
 
@@ -471,23 +564,18 @@ public class GuardAI : MonoBehaviour
         hasSeenPlayer = true;
         alertnessLevel = 100f;
 
-        if (distanceToPlayer > minChaseDistance + 1f)
-        {
-            lastKnownPlayerPosition = player.position;
-            MoveTowards(player.position, chaseSpeed);
-            losePlayerTimer = 0f;
-        }
-        else if (distanceToPlayer > 1.5f)
-        {
-            MoveTowards(player.position, chaseSpeed * 0.5f);
-            losePlayerTimer = 0f;
-        }
-        else
+        // Verificar si puede capturar al jugador
+        if (distanceToPlayer <= captureDistance)
         {
             CapturePlayer();
             return;
         }
 
+        // Perseguir al jugador
+        lastKnownPlayerPosition = player.position;
+        MoveTowards(player.position, chaseSpeed);
+
+        // Sistema de pérdida de vista
         if (!HasLineOfSight(player.position))
         {
             losePlayerTimer += Time.deltaTime;
@@ -555,49 +643,73 @@ public class GuardAI : MonoBehaviour
 
     public void StartChasing()
     {
+        // Evitar llamar múltiples veces
+        if (currentState == GuardState.Chasing)
+        {
+            if (showDetailedLogs)
+                Debug.Log($"[{gameObject.name}] Ya está persiguiendo, ignorando llamada duplicada");
+            return;
+        }
+
         currentState = GuardState.Chasing;
         alertnessLevel = 100f;
         hasSeenPlayer = true;
         losePlayerTimer = 0f;
 
-        if (alertSounds.Length > 0 && audioSource != null)
+        Debug.Log($"<color=red>[{gameObject.name}] ¡Te vi! ¡No puedes escapar!</color>");
+
+        // Reproducir sonido de alerta
+        if (alertSounds != null && alertSounds.Length > 0 && audioSource != null)
         {
             audioSource.PlayOneShot(alertSounds[Random.Range(0, alertSounds.Length)]);
+            Debug.Log($"[{gameObject.name}] Sonido de alerta reproducido");
+        }
+        else
+        {
+            Debug.LogWarning($"[{gameObject.name}] No se pudo reproducir sonido de alerta");
         }
 
-        Debug.Log("¡Te vi! ¡No puedes escapar!");
+        // La música se activará automáticamente en UpdateChaseMusic() en el siguiente frame
     }
 
     void CapturePlayer()
     {
-        Debug.Log("¡Te atrapé! Reiniciando...");
+        Debug.Log("<color=magenta>¡¡¡TE ATRAPÉ!!! Iniciando secuencia de captura...</color>");
 
-        // Reproducir sonido de captura
-        if (captureSound != null && audioSource != null)
+        // Marcar como capturando para detener todo
+        isCapturing = true;
+        currentState = GuardState.Capturing;
+
+        // Detener movimiento del guardia completamente
+        Rigidbody guardRb = GetComponent<Rigidbody>();
+        if (guardRb != null)
         {
-            audioSource.PlayOneShot(captureSound);
+            guardRb.linearVelocity = Vector3.zero;
+            guardRb.angularVelocity = Vector3.zero;
+            guardRb.isKinematic = true; // Hacer kinematic para evitar movimientos físicos
         }
 
         // Detener música de persecución inmediatamente
-        if (chaseAudioSource != null && chaseAudioSource.isPlaying)
+        if (chaseAudioSource != null)
         {
+            if (chaseMusicCoroutine != null)
+            {
+                StopCoroutine(chaseMusicCoroutine);
+                chaseMusicCoroutine = null;
+            }
             chaseAudioSource.Stop();
             chaseAudioSource.volume = 0f;
         }
         isChasingWithMusic = false;
 
-        GameManager gameManager = FindFirstObjectByType<GameManager>();
-        if (gameManager != null)
+        // Reproducir sonido de captura si existe
+        if (captureSound != null && audioSource != null)
         {
-            // Pequeño delay para que se escuche el sonido de captura
-            StartCoroutine(RestartAfterCapture(gameManager));
+            audioSource.PlayOneShot(captureSound);
         }
-    }
 
-    IEnumerator RestartAfterCapture(GameManager gameManager)
-    {
-        yield return new WaitForSeconds(1.5f);
-        gameManager.RestartNight();
+        // Llamar al sistema de captura
+        CaptureSystem.TriggerCapture();
     }
 
     void MoveTowards(Vector3 target, float speed)
@@ -688,6 +800,7 @@ public class GuardAI : MonoBehaviour
             case GuardState.Patrolling: return patrolSpeed / 4f;
             case GuardState.Chasing: return 1f;
             case GuardState.Investigating: return patrolSpeed / 3f;
+            case GuardState.Capturing: return 0f;
             default: return 0f;
         }
     }
@@ -715,6 +828,7 @@ public class GuardAI : MonoBehaviour
 
     public void ResetGuard()
     {
+        isCapturing = false;
         transform.position = initialPosition;
         transform.rotation = initialRotation;
 
@@ -729,6 +843,11 @@ public class GuardAI : MonoBehaviour
         alertnessLevel = 0f;
 
         // Detener música de persecución
+        if (chaseMusicCoroutine != null)
+        {
+            StopCoroutine(chaseMusicCoroutine);
+            chaseMusicCoroutine = null;
+        }
         if (chaseAudioSource != null && chaseAudioSource.isPlaying)
         {
             chaseAudioSource.Stop();
@@ -739,6 +858,7 @@ public class GuardAI : MonoBehaviour
         Rigidbody rb = GetComponent<Rigidbody>();
         if (rb != null)
         {
+            rb.isKinematic = false;
             rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
         }
@@ -782,9 +902,8 @@ public class GuardAI : MonoBehaviour
         Gizmos.DrawWireSphere(transform.position, hearingRange);
 
         Gizmos.color = Color.blue;
-        Gizmos.DrawWireSphere(transform.position, minChaseDistance);
+        Gizmos.DrawWireSphere(transform.position, captureDistance);
 
-        // Mostrar rango de tos
         Gizmos.color = new Color(0, 1, 0, 0.2f);
         Gizmos.DrawWireSphere(transform.position, coughDetectionRange);
 
@@ -823,6 +942,11 @@ public class GuardAI : MonoBehaviour
                 Gizmos.color = Color.magenta;
                 Gizmos.DrawLine(transform.position, lastKnownPlayerPosition);
                 Gizmos.DrawWireSphere(lastKnownPlayerPosition, 1f);
+                break;
+
+            case GuardState.Capturing:
+                Gizmos.color = new Color(1, 0, 0, 0.5f);
+                Gizmos.DrawWireSphere(transform.position, 2f);
                 break;
         }
     }

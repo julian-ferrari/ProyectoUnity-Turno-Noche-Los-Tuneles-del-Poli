@@ -447,7 +447,17 @@ public class PlayerController : MonoBehaviour
 
     void PlayFootsteps()
     {
-        if (footstepSounds == null || footstepSounds.Length == 0) return;
+        if (footstepSounds == null || footstepSounds.Length == 0)
+        {
+            Debug.LogWarning("No hay sonidos de pasos asignados!");
+            return;
+        }
+
+        if (audioSource == null)
+        {
+            Debug.LogError("AudioSource es null en PlayFootsteps!");
+            return;
+        }
 
         footstepTimer += Time.deltaTime;
 
@@ -470,10 +480,15 @@ public class PlayerController : MonoBehaviour
             // Elegir un sonido aleatorio de pasos
             AudioClip footstep = footstepSounds[Random.Range(0, footstepSounds.Length)];
 
-            if (audioSource != null && footstep != null)
+            if (footstep != null)
             {
                 audioSource.pitch = Random.Range(0.9f, 1.1f); // Variar tono ligeramente
                 audioSource.PlayOneShot(footstep, footstepVolume);
+                Debug.Log($"Reproduciendo paso: {footstep.name}, Volumen: {footstepVolume}");
+            }
+            else
+            {
+                Debug.LogWarning("AudioClip de footstep es null!");
             }
         }
     }
