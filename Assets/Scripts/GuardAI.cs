@@ -54,8 +54,8 @@ public class GuardAI : MonoBehaviour
     public float pointReachedDistance = 0.5f;
 
     [Header("Debug & Testing")]
-    public bool debugMode = true;
-    public bool showDetailedLogs = true;
+    public bool debugMode = false;
+    public bool showDetailedLogs = false;
     public KeyCode testDetectionKey = KeyCode.T;
     public KeyCode resetGuardKey = KeyCode.R;
     public KeyCode togglePatrolKey = KeyCode.P;
@@ -78,8 +78,11 @@ public class GuardAI : MonoBehaviour
 
     private float nextCoughTime = 0f;
     private bool isChasingWithMusic = false;
-    private bool isCapturing = false; // NUEVO: Flag para saber si está capturando
-    private Coroutine chaseMusicCoroutine = null; // NUEVO: Referencia a la corrutina activa
+    private bool isCapturing = false;
+    private Coroutine chaseMusicCoroutine = null;
+
+    // Variables para controlar rotación
+    private float searchRotationSpeed = 60f; // Velocidad de rotación durante búsqueda
 
     public enum GuardState { Patrolling, Investigating, Chasing, Searching, Returning, Capturing }
     public GuardState currentState = GuardState.Patrolling;
@@ -152,7 +155,6 @@ public class GuardAI : MonoBehaviour
         TestInputs();
 #endif
 
-        // Si está capturando, no hacer nada más
         if (isCapturing)
         {
             return;
@@ -185,7 +187,6 @@ public class GuardAI : MonoBehaviour
                 break;
 
             case GuardState.Capturing:
-                // No hacer nada, la captura se maneja en CapturePlayer
                 break;
         }
 
@@ -252,10 +253,8 @@ public class GuardAI : MonoBehaviour
 
     void UpdateChaseMusic()
     {
-        // Activar música durante persecución
         if (currentState == GuardState.Chasing && !isChasingWithMusic)
         {
-            // Cancelar fade out anterior si existe
             if (chaseMusicCoroutine != null)
             {
                 StopCoroutine(chaseMusicCoroutine);
@@ -266,10 +265,8 @@ public class GuardAI : MonoBehaviour
             if (showDetailedLogs)
                 Debug.Log("<color=cyan>MÚSICA DE PERSECUCIÓN ACTIVADA</color>");
         }
-        // Desactivar música cuando deja de perseguir
         else if (currentState != GuardState.Chasing && isChasingWithMusic)
         {
-            // Cancelar fade in anterior si existe
             if (chaseMusicCoroutine != null)
             {
                 StopCoroutine(chaseMusicCoroutine);
@@ -294,7 +291,6 @@ public class GuardAI : MonoBehaviour
         {
             chaseAudioSource.volume = 0f;
             chaseAudioSource.Play();
-            Debug.Log("Reproduciendo música de persecución");
         }
 
         float elapsed = 0f;
@@ -331,8 +327,9 @@ public class GuardAI : MonoBehaviour
     void UpdateAlertness()
     {
         float alertMultiplier = 1f + (alertnessLevel / 100f);
-        patrolSpeed = 2f * alertMultiplier;
-        detectionRange = 5f * alertMultiplier;
+        // NO modificar patrolSpeed directamente - guardar la velocidad base
+        // patrolSpeed se multiplica en tiempo real cuando se necesita
+        detectionRange = 10f * (alertnessLevel > 0 ? 1.2f : 1f);
     }
 
     void Patrol()
@@ -399,7 +396,6 @@ public class GuardAI : MonoBehaviour
         float distanceToPlayer = Vector3.Distance(transform.position, player.position);
         bool playerDetected = false;
 
-        // DETECCIÓN VISUAL
         if (distanceToPlayer <= detectionRange)
         {
             Vector3 directionToPlayer = (player.position - transform.position).normalized;
@@ -444,7 +440,6 @@ public class GuardAI : MonoBehaviour
             }
         }
 
-        // DETECCIÓN DE LINTERNA
         if (canSeeFlashlight && distanceToPlayer <= detectionRange * 2f)
         {
             Light flashlight = player.GetComponentInChildren<Light>();
@@ -461,7 +456,6 @@ public class GuardAI : MonoBehaviour
             }
         }
 
-        // DETECCIÓN DE SONIDO
         if (canHearFootsteps && distanceToPlayer <= hearingRange)
         {
             float noiseThreshold = 0.3f;
@@ -471,7 +465,6 @@ public class GuardAI : MonoBehaviour
             {
                 Debug.Log($"<color=orange>[{gameObject.name}] ¡Ruido detectado!</color> Nivel: {playerController.currentNoiseLevel:F2}");
 
-                // Si ya está investigando y escucha ruido, detectar directamente
                 if (currentState == GuardState.Investigating)
                 {
                     playerDetected = true;
@@ -534,7 +527,8 @@ public class GuardAI : MonoBehaviour
         else
         {
             investigateTimer += Time.deltaTime;
-            transform.Rotate(0, 45f * Time.deltaTime, 0);
+            // CORREGIDO: Rotar solo en el eje Y
+            RotateAroundY(searchRotationSpeed);
 
             if (investigateTimer >= investigateTime)
             {
@@ -564,18 +558,15 @@ public class GuardAI : MonoBehaviour
         hasSeenPlayer = true;
         alertnessLevel = 100f;
 
-        // Verificar si puede capturar al jugador
         if (distanceToPlayer <= captureDistance)
         {
             CapturePlayer();
             return;
         }
 
-        // Perseguir al jugador
         lastKnownPlayerPosition = player.position;
         MoveTowards(player.position, chaseSpeed);
 
-        // Sistema de pérdida de vista
         if (!HasLineOfSight(player.position))
         {
             losePlayerTimer += Time.deltaTime;
@@ -597,25 +588,17 @@ public class GuardAI : MonoBehaviour
 
     void SearchLastKnownPosition()
     {
-        float distance = Vector3.Distance(transform.position, lastKnownPlayerPosition);
-
-        if (distance > 2f)
+        // SIMPLIFICADO: Ir directamente al punto de patrulla más cercano sin buscar
+        // Resetear velocidad residual antes de volver
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb != null)
         {
-            MoveTowards(lastKnownPlayerPosition, chaseSpeed * 0.8f);
-        }
-        else
-        {
-            investigateTimer += Time.deltaTime;
-            transform.Rotate(0, 60f * Time.deltaTime, 0);
-
-            if (investigateTimer >= investigateTime * 1.5f)
-            {
-                currentState = GuardState.Returning;
-                investigateTimer = 0f;
-            }
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
         }
 
-        CheckForPlayer();
+        currentState = GuardState.Returning;
+        Debug.Log("Perdí al jugador, volviendo a patrullar");
     }
 
     void ReturnToPatrol()
@@ -630,6 +613,15 @@ public class GuardAI : MonoBehaviour
         else
         {
             currentState = GuardState.Patrolling;
+
+            // IMPORTANTE: Resetear física al volver a patrullar
+            Rigidbody rb = GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+            }
+
             for (int i = 0; i < patrolPoints.Length; i++)
             {
                 if (patrolPoints[i] == nearestPatrolPoint)
@@ -638,12 +630,12 @@ public class GuardAI : MonoBehaviour
                     break;
                 }
             }
+            Debug.Log("Regresé a mi patrulla");
         }
     }
 
     public void StartChasing()
     {
-        // Evitar llamar múltiples veces
         if (currentState == GuardState.Chasing)
         {
             if (showDetailedLogs)
@@ -658,38 +650,27 @@ public class GuardAI : MonoBehaviour
 
         Debug.Log($"<color=red>[{gameObject.name}] ¡Te vi! ¡No puedes escapar!</color>");
 
-        // Reproducir sonido de alerta
         if (alertSounds != null && alertSounds.Length > 0 && audioSource != null)
         {
             audioSource.PlayOneShot(alertSounds[Random.Range(0, alertSounds.Length)]);
-            Debug.Log($"[{gameObject.name}] Sonido de alerta reproducido");
         }
-        else
-        {
-            Debug.LogWarning($"[{gameObject.name}] No se pudo reproducir sonido de alerta");
-        }
-
-        // La música se activará automáticamente en UpdateChaseMusic() en el siguiente frame
     }
 
     void CapturePlayer()
     {
         Debug.Log("<color=magenta>¡¡¡TE ATRAPÉ!!! Iniciando secuencia de captura...</color>");
 
-        // Marcar como capturando para detener todo
         isCapturing = true;
         currentState = GuardState.Capturing;
 
-        // Detener movimiento del guardia completamente
         Rigidbody guardRb = GetComponent<Rigidbody>();
         if (guardRb != null)
         {
             guardRb.linearVelocity = Vector3.zero;
             guardRb.angularVelocity = Vector3.zero;
-            guardRb.isKinematic = true; // Hacer kinematic para evitar movimientos físicos
+            guardRb.isKinematic = true;
         }
 
-        // Detener música de persecución inmediatamente
         if (chaseAudioSource != null)
         {
             if (chaseMusicCoroutine != null)
@@ -702,19 +683,32 @@ public class GuardAI : MonoBehaviour
         }
         isChasingWithMusic = false;
 
-        // Reproducir sonido de captura si existe
         if (captureSound != null && audioSource != null)
         {
             audioSource.PlayOneShot(captureSound);
         }
 
-        // Llamar al sistema de captura
         CaptureSystem.TriggerCapture();
+    }
+
+    // NUEVO: Método para rotar solo en el eje Y (horizontal)
+    void RotateAroundY(float degreesPerSecond)
+    {
+        // Guardar el ángulo actual en X y Z
+        Vector3 currentEuler = transform.eulerAngles;
+
+        // Rotar solo en Y
+        transform.Rotate(0, degreesPerSecond * Time.deltaTime, 0, Space.World);
+
+        // Forzar que X y Z sean 0 (mantener vertical)
+        transform.eulerAngles = new Vector3(0f, transform.eulerAngles.y, 0f);
     }
 
     void MoveTowards(Vector3 target, float speed)
     {
-        Vector3 direction = (target - transform.position).normalized;
+        // Crear dirección solo en el plano horizontal (ignorar Y)
+        Vector3 horizontalTarget = new Vector3(target.x, transform.position.y, target.z);
+        Vector3 direction = (horizontalTarget - transform.position).normalized;
 
         Rigidbody guardRb = GetComponent<Rigidbody>();
         if (guardRb != null)
@@ -734,9 +728,12 @@ public class GuardAI : MonoBehaviour
             transform.position += direction * speed * Time.deltaTime;
         }
 
+        // CORREGIDO: Rotar solo en el eje Y
         if (direction != Vector3.zero)
         {
             Quaternion targetRotation = Quaternion.LookRotation(direction);
+            // Mantener solo la rotación Y
+            targetRotation = Quaternion.Euler(0f, targetRotation.eulerAngles.y, 0f);
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 5f);
         }
     }
@@ -842,7 +839,6 @@ public class GuardAI : MonoBehaviour
         hasSeenPlayer = false;
         alertnessLevel = 0f;
 
-        // Detener música de persecución
         if (chaseMusicCoroutine != null)
         {
             StopCoroutine(chaseMusicCoroutine);
