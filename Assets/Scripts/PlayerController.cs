@@ -546,20 +546,13 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    public void PickupKey(KeyItem key)
+    public void PickupKey(KeyItem keyItem)
     {
-        if (keys.Count < maxKeys)
+        InventoryManager inventory = FindFirstObjectByType<InventoryManager>();
+
+        if (inventory != null)
         {
-            if (!keys.Contains(key.keyID))
-            {
-                keys.Add(key.keyID);
-                ShowInteractionMessage("Recogiste: " + key.keyName);
-                Debug.Log("Llave añadida al inventario: " + key.keyID);
-            }
-        }
-        else
-        {
-            ShowInteractionMessage("¡Inventario lleno!");
+            inventory.AddKey(keyItem);
         }
     }
 

@@ -225,6 +225,12 @@ public class FlashlightFPSController : MonoBehaviour
 
     public void ToggleFlashlight()
     {
+        InventoryManager inventory = FindFirstObjectByType<InventoryManager>();
+        if (inventory != null && inventory.GetSelectedItemType() != InventoryManager.ItemType.Flashlight)
+        {
+            Debug.Log("Necesitás tener la linterna seleccionada");
+            return;
+        }
         Debug.Log("=== TOGGLE FLASHLIGHT ===");
 
         if (flashlightInstance == null)
