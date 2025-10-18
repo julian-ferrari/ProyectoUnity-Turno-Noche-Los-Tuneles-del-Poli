@@ -78,6 +78,9 @@ public class PlayerController : MonoBehaviour
     private bool isMoving = false;
     private bool wasRunning = false;
 
+    // NUEVO: Sistema de guardado - Punto de spawn
+    private Vector3 spawnPoint;
+
     void Start()
     {
         pauseMenu = FindFirstObjectByType<PoliNightsPauseMenu>();
@@ -120,6 +123,10 @@ public class PlayerController : MonoBehaviour
         // Initialize camera height
         targetCameraHeight = normalCameraHeight;
         currentCameraHeight = normalCameraHeight;
+
+        // NUEVO: Guardar punto de spawn inicial
+        spawnPoint = transform.position;
+        Debug.Log($"PlayerController: Spawn point inicial guardado en {spawnPoint}");
     }
 
     void SetupAudio()
@@ -594,5 +601,33 @@ public class PlayerController : MonoBehaviour
             Cursor.visible = false;
         }
         Debug.Log("PlayerController: Juego reanudado");
+    }
+
+    // ================ MÉTODOS PARA SISTEMA DE GUARDADO ================
+
+    /// <summary>
+    /// Obtiene el punto de spawn actual del jugador (usado por CaptureSystem)
+    /// </summary>
+    public Vector3 GetSpawnPoint()
+    {
+        return spawnPoint;
+    }
+
+    /// <summary>
+    /// Establece un nuevo punto de spawn para el jugador (usado al cargar partida)
+    /// </summary>
+    public void SetSpawnPoint(Vector3 newSpawnPoint)
+    {
+        spawnPoint = newSpawnPoint;
+        Debug.Log($"PlayerController: Spawn point actualizado a {spawnPoint}");
+    }
+
+    /// <summary>
+    /// Actualiza el spawn point a la posición actual (útil para checkpoints)
+    /// </summary>
+    public void UpdateSpawnPointToCurrentPosition()
+    {
+        spawnPoint = transform.position;
+        Debug.Log($"PlayerController: Spawn point actualizado a posición actual: {spawnPoint}");
     }
 }

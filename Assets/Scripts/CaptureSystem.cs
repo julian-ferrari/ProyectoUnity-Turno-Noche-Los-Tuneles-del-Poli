@@ -24,6 +24,10 @@ public class CaptureSystem : MonoBehaviour
 
     private static CaptureSystem instance;
 
+    // NUEVO: Sistema de spawn point personalizado desde guardado
+    private static Vector3 customRespawnPoint = Vector3.zero;
+    private static bool hasCustomRespawnPoint = false;
+
     void Awake()
     {
         if (instance == null)
@@ -159,6 +163,21 @@ public class CaptureSystem : MonoBehaviour
         instance.StartCoroutine(instance.CaptureSequence());
     }
 
+    // NUEVO: Método para establecer el punto de respawn desde el sistema de guardado
+    public static void SetRespawnPoint(Vector3 respawnPoint)
+    {
+        customRespawnPoint = respawnPoint;
+        hasCustomRespawnPoint = true;
+        Debug.Log($"<color=cyan>CaptureSystem: Respawn point personalizado establecido en {respawnPoint}</color>");
+    }
+
+    // NUEVO: Método para limpiar el respawn point personalizado
+    public static void ClearCustomRespawnPoint()
+    {
+        hasCustomRespawnPoint = false;
+        Debug.Log("CaptureSystem: Respawn point personalizado limpiado");
+    }
+
     IEnumerator CaptureSequence()
     {
         isCapturing = true;
@@ -250,28 +269,29 @@ public class CaptureSystem : MonoBehaviour
         Debug.Log($"Manteniendo pantalla negra por {blackScreenDuration} segundos...");
         yield return new WaitForSeconds(blackScreenDuration);
 
-        Debug.Log("Teleportando jugador al inicio");
+        // MODIFICADO: Teleportar jugador usando el sistema de prioridades
+        Debug.Log("Teleportando jugador...");
+        Vector3 respawnPosition = GetRespawnPosition();
+        Quaternion respawnRotation = GetRespawnRotation();
 
-        // Teleportar jugador al inicio
-        if (playerSpawnPoint != null)
-        {
-            player.transform.position = playerSpawnPoint.position;
-            player.transform.rotation = playerSpawnPoint.rotation;
-            Debug.Log($"Jugador teleportado a: {playerSpawnPoint.position}");
-        }
-        else
-        {
-            // Si no hay spawn point, usar posición por defecto
-            player.transform.position = new Vector3(0, 1, 0);
-            player.transform.rotation = Quaternion.identity;
-            Debug.LogWarning("No hay spawn point asignado, usando posición por defecto (0, 1, 0)");
-        }
+        player.transform.position = respawnPosition;
+        player.transform.rotation = respawnRotation;
+
+        Debug.Log($"<color=yellow>Jugador teleportado a: {respawnPosition}</color>");
 
         // Resetear velocidad
         if (playerRb != null)
         {
             playerRb.linearVelocity = Vector3.zero;
             playerRb.angularVelocity = Vector3.zero;
+        }
+
+        // Resetear Character Controller si existe
+        CharacterController cc = player.GetComponent<CharacterController>();
+        if (cc != null)
+        {
+            cc.enabled = false;
+            cc.enabled = true;
         }
 
         // Resetear guardias
@@ -302,6 +322,49 @@ public class CaptureSystem : MonoBehaviour
         isCapturing = false;
 
         Debug.Log("<color=green>=== SECUENCIA DE CAPTURA COMPLETADA ===</color>");
+    }
+
+    // NUEVO: Método para obtener la posición de respawn con sistema de prioridades
+    private Vector3 GetRespawnPosition()
+    {
+        // Prioridad 1: Respawn point desde guardado (cuando se carga una partida)
+        if (hasCustomRespawnPoint)
+        {
+            Debug.Log($"<color=cyan>Usando respawn point desde guardado: {customRespawnPoint}</color>");
+            return customRespawnPoint;
+        }
+
+        // Prioridad 2: Spawn point del PlayerController
+        if (player != null)
+        {
+            Vector3 spawnPoint = player.GetSpawnPoint();
+            Debug.Log($"<color=green>Usando spawn point del PlayerController: {spawnPoint}</color>");
+            return spawnPoint;
+        }
+
+        // Prioridad 3: playerSpawnPoint del CaptureSystem
+        if (playerSpawnPoint != null)
+        {
+            Debug.Log($"<color=yellow>Usando playerSpawnPoint del CaptureSystem: {playerSpawnPoint.position}</color>");
+            return playerSpawnPoint.position;
+        }
+
+        // Fallback: Posición por defecto
+        Debug.LogWarning("No hay spawn point configurado, usando posición por defecto (0, 1, 0)");
+        return new Vector3(0, 1, 0);
+    }
+
+    // NUEVO: Método para obtener la rotación de respawn
+    private Quaternion GetRespawnRotation()
+    {
+        // Si hay playerSpawnPoint, usar su rotación
+        if (playerSpawnPoint != null)
+        {
+            return playerSpawnPoint.rotation;
+        }
+
+        // Caso contrario, usar rotación identidad
+        return Quaternion.identity;
     }
 
     IEnumerator FadeToBlack()
@@ -384,5 +447,4 @@ public class CaptureSystem : MonoBehaviour
         playerSpawnPoint = spawnPoint;
         Debug.Log($"Spawn point configurado: {spawnPoint.position}");
     }
-
 }

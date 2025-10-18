@@ -25,6 +25,10 @@ public class PoliNightsPauseMenu : MonoBehaviour
     public AudioSource resumeSound;
     public AudioSource buttonClickSound;
 
+    [Header("Save Feedback (Optional)")]
+    public GameObject saveSuccessMessage;
+    public float saveMessageDuration = 2f;
+
     private bool isPaused = false;
     private bool canPause = true;
     private float originalTimeScale;
@@ -56,6 +60,12 @@ public class PoliNightsPauseMenu : MonoBehaviour
         {
             pauseMenuCanvas = this.gameObject;
             Debug.Log("Usando este GameObject como pauseMenuCanvas");
+        }
+
+        // Ocultar mensaje de guardado si existe
+        if (saveSuccessMessage != null)
+        {
+            saveSuccessMessage.SetActive(false);
         }
 
         // Configurar botones
@@ -208,8 +218,28 @@ public class PoliNightsPauseMenu : MonoBehaviour
 
     public void SaveGame()
     {
-        Debug.Log("Guardar juego - Funcionalidad pendiente");
-        // TODO: Implementar sistema de guardado
+        try
+        {
+            SaveSystem.SaveGame();
+            Debug.Log("¡Partida guardada exitosamente!");
+
+            // Mostrar mensaje de confirmación si está configurado
+            if (saveSuccessMessage != null)
+            {
+                StartCoroutine(ShowSaveMessage());
+            }
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"Error al guardar: {e.Message}");
+        }
+    }
+
+    private System.Collections.IEnumerator ShowSaveMessage()
+    {
+        saveSuccessMessage.SetActive(true);
+        yield return new WaitForSecondsRealtime(saveMessageDuration);
+        saveSuccessMessage.SetActive(false);
     }
 
     public void OpenAchievements()

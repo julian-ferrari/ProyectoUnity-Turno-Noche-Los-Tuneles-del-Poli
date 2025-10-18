@@ -946,4 +946,56 @@ public class GuardAI : MonoBehaviour
                 break;
         }
     }
+
+    // ================ MÉTODOS PARA SISTEMA DE GUARDADO ================
+    public int GetCurrentPatrolIndex()
+    {
+        return currentPatrolIndex;
+    }
+
+    public bool HasSeenPlayer()
+    {
+        return hasSeenPlayer;
+    }
+
+    public void RestoreState(string stateName, int patrolIndex, float alertness, bool seenPlayer)
+    {
+        if (chaseMusicCoroutine != null)
+        {
+            StopCoroutine(chaseMusicCoroutine);
+            chaseMusicCoroutine = null;
+        }
+        if (chaseAudioSource != null && chaseAudioSource.isPlaying)
+        {
+            chaseAudioSource.Stop();
+            chaseAudioSource.volume = 0f;
+        }
+        isChasingWithMusic = false;
+        isCapturing = false;
+
+        try
+        {
+            currentState = (GuardState)System.Enum.Parse(typeof(GuardState), stateName);
+        }
+        catch
+        {
+            currentState = GuardState.Patrolling;
+        }
+
+        currentPatrolIndex = patrolIndex;
+        alertnessLevel = alertness;
+        hasSeenPlayer = seenPlayer;
+        waitTimer = 0f;
+        investigateTimer = 0f;
+        losePlayerTimer = 0f;
+
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.isKinematic = false;
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+            rb.freezeRotation = true;
+        }
+    }
 }

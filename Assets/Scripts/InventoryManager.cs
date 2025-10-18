@@ -113,10 +113,12 @@ public class InventoryManager : MonoBehaviour
 
     public void AddLockpick()
     {
-        lockpickCount++;
-        if (lockpickCount == 1)
+        // Solo agregar si no la tiene
+        if (lockpickCount == 0)
         {
+            lockpickCount = 1;
             AddItemToFirstEmptySlot(lockpickItem);
+            Debug.Log("Ganzúa agregada al inventario (permanente)");
         }
         UpdateUI();
     }
@@ -273,14 +275,7 @@ public class InventoryManager : MonoBehaviour
 
     public void UseLockpick()
     {
-        if (lockpickCount > 0)
-        {
-            lockpickCount--;
-            if (lockpickCount == 0)
-            {
-                RemoveItemByType(ItemType.Lockpick);
-            }
-        }
+        Debug.Log("Usando ganzúa");
     }
 
     public int GetLockpickCount() => lockpickCount;
@@ -317,5 +312,54 @@ public class InventoryManager : MonoBehaviour
     {
         InventoryItem item = GetSelectedItem();
         return item != null ? item.type : ItemType.None;
+    }
+
+    // ================ MÉTODOS PARA SISTEMA DE GUARDADO ================
+
+    public void ClearInventory()
+    {
+        for (int i = 0; i < inventorySlots.Count; i++)
+        {
+            inventorySlots[i] = null;
+        }
+        DeselectItem();
+        lockpickCount = 0;
+        hasKey = false;
+        hasFlashlight = false;
+        UpdateUI();
+    }
+
+    public void SetItemAtSlot(int slotIndex, InventoryManager.InventoryItem item)
+    {
+        if (slotIndex >= 0 && slotIndex < inventorySlots.Count)
+        {
+            inventorySlots[slotIndex] = item;
+        }
+    }
+
+    public void SetLockpickCount(int count)
+    {
+        lockpickCount = count;
+    }
+
+    public void SetHasKey(bool value)
+    {
+        hasKey = value;
+    }
+
+    public void SetHasFlashlight(bool value)
+    {
+        hasFlashlight = value;
+    }
+
+    public bool HasFlashlight()
+    {
+        return hasFlashlight;
+    }
+
+    public void ForceUpdateUI()
+    {
+        UpdateUI();
+        Debug.Log("UI del inventario actualizada forzadamente");
     }
 }
