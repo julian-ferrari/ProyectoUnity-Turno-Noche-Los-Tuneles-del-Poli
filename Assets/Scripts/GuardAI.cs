@@ -94,7 +94,7 @@ public class GuardAI : MonoBehaviour
         playerController = player.GetComponent<PlayerController>();
 
         if (guardAnimator == null)
-            guardAnimator = GetComponent<Animator>();
+            guardAnimator = GetComponentInChildren<Animator>();
         if (audioSource == null)
             audioSource = GetComponent<AudioSource>();
 
@@ -782,9 +782,15 @@ public class GuardAI : MonoBehaviour
 
     void UpdateAnimations()
     {
-        if (guardAnimator == null) return;
+        if (guardAnimator == null)
+        {
+            Debug.LogError("guardAnimator es NULL!");
+            return;
+        }
 
-        guardAnimator.SetFloat("Speed", GetCurrentSpeed());
+        float currentSpeed = GetCurrentSpeed();
+        Debug.Log("Actualizando Speed a: " + currentSpeed);
+        guardAnimator.SetFloat("Speed", currentSpeed);
         guardAnimator.SetBool("IsChasing", currentState == GuardState.Chasing);
         guardAnimator.SetBool("IsInvestigating", currentState == GuardState.Investigating);
         guardAnimator.SetFloat("Alertness", alertnessLevel / 100f);
