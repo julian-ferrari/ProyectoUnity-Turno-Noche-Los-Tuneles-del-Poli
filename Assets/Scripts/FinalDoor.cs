@@ -45,8 +45,8 @@ public class FinalDoor : MonoBehaviour
             playerController = playerObj.GetComponent<PlayerController>();
         }
 
-        // Buscar inventario
-        inventoryManager = FindFirstObjectByType<InventoryManager>();
+        // Buscar inventario usando el singleton
+        inventoryManager = InventoryManager.Instance;
         if (inventoryManager == null)
         {
             Debug.LogError("FinalDoor: No se encontró InventoryManager!");
@@ -71,7 +71,7 @@ public class FinalDoor : MonoBehaviour
 
         if (playerInRange)
         {
-            // Verificar si tiene la llave equipada
+            // Verificar si tiene la llave correcta
             bool hasCorrectKey = CheckIfPlayerHasKey();
 
             if (hasCorrectKey)
@@ -79,7 +79,7 @@ public class FinalDoor : MonoBehaviour
                 // Mostrar mensaje de que puede usar la puerta
                 if (playerController != null)
                 {
-                    playerController.ShowInteractionMessage($"Presiona E para usar '{requiredKeyID}'");
+                    playerController.ShowInteractionMessage($"Presiona E para usar la llave final");
                 }
 
                 // Intentar usar la llave
@@ -113,32 +113,32 @@ public class FinalDoor : MonoBehaviour
         if (inventoryManager == null)
             return "Error: No se encontró inventario";
 
-        // Verificar si tiene alguna llave
-        if (!inventoryManager.HasKey())
-            return $"Necesitas conseguir '{requiredKeyID}'";
+        // Verificar si tiene la llave correcta en el inventario
+        if (!inventoryManager.HasKey(requiredKeyID))
+        {
+            // Verificar si tiene alguna otra llave
+            var allKeys = inventoryManager.GetCollectedKeyIDs();
+            if (allKeys.Count > 0)
+            {
+                return $"Esta llave no sirve. Necesitas '{requiredKeyID}'";
+            }
+            else
+            {
+                return $"Necesitas conseguir '{requiredKeyID}'";
+            }
+        }
 
-        // Verificar si tiene algo seleccionado
-        InventoryManager.InventoryItem selectedItem = inventoryManager.GetSelectedItem();
-
-        if (selectedItem == null)
-            return $"Equipa '{requiredKeyID}' para abrir";
-
-        // Verificar si lo seleccionado es una llave
-        if (selectedItem.type != InventoryManager.ItemType.Key)
-            return $"Equipa '{requiredKeyID}' para abrir";
-
-        // Tiene una llave equipada pero no es la correcta
-        return $"Esta llave no sirve. Necesitas '{requiredKeyID}'";
+        // Tiene la llave correcta pero no la tiene equipada
+        return $"Equipa '{requiredKeyID}' para abrir (presiona número del slot)";
     }
 
     bool CheckIfPlayerHasKey()
     {
         if (inventoryManager == null) return false;
 
-        // Verificar si tiene alguna llave en el inventario
-        if (!inventoryManager.HasKey())
+        // Verificar si tiene la llave correcta en el inventario
+        if (!inventoryManager.HasKey(requiredKeyID))
         {
-            Debug.Log("FinalDoor: Jugador no tiene ninguna llave");
             return false;
         }
 
@@ -158,18 +158,14 @@ public class FinalDoor : MonoBehaviour
             return false;
         }
 
-        // IMPORTANTE: Verificar el itemName directamente del inventario
-        Debug.Log($"FinalDoor: Llave equipada es '{selectedItem.itemName}', buscando '{requiredKeyID}'");
-
-        // Verificar si el nombre de la llave coincide
-        if (selectedItem.itemName == requiredKeyID ||
-            selectedItem.itemName.Contains(requiredKeyID))
+        // Verificar si el ID de la llave coincide
+        if (selectedItem.itemID == requiredKeyID)
         {
-            Debug.Log($"FinalDoor: ¡Llave correcta encontrada! {selectedItem.itemName}");
+            Debug.Log($"FinalDoor: ¡Llave correcta equipada! {selectedItem.itemName}");
             return true;
         }
 
-        Debug.Log($"FinalDoor: Llave incorrecta. Equipada: '{selectedItem.itemName}', Requerida: '{requiredKeyID}'");
+        Debug.Log($"FinalDoor: Llave incorrecta. Equipada: '{selectedItem.itemID}', Requerida: '{requiredKeyID}'");
         return false;
     }
 

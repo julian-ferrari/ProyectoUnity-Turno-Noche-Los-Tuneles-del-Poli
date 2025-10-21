@@ -4,12 +4,15 @@ using System.Collections.Generic;
 
 public class InventoryManager : MonoBehaviour
 {
+    public static InventoryManager Instance { get; private set; }
+
     [System.Serializable]
     public class InventoryItem
     {
         public string itemName;
+        public string itemID; // ID único (para llaves)
         public Sprite itemIcon;
-        public GameObject itemModelPrefab; // El prefab del holder (hijo de cámara)
+        public GameObject itemModelPrefab;
         public ItemType type;
     }
 
@@ -23,7 +26,6 @@ public class InventoryManager : MonoBehaviour
 
     [Header("Items disponibles")]
     public InventoryItem flashlightItem;
-    public InventoryItem keyItem;
     public InventoryItem lockpickItem;
 
     [Header("Inventario actual (5 slots)")]
@@ -38,20 +40,33 @@ public class InventoryManager : MonoBehaviour
     public int selectedSlotIndex = -1;
 
     [Header("Primera Persona")]
-    public Transform fpItemHolder; // Main Camera
+    public Transform fpItemHolder;
     private GameObject currentFPItem;
 
     [Header("Referencias")]
     public FlashlightFPSController flashlightController;
 
-    // Contadores
+    // Contadores y colecciones
     private int lockpickCount = 0;
-    private bool hasKey = false;
     private bool hasFlashlight = false;
+    private Dictionary<string, InventoryItem> collectedKeys = new Dictionary<string, InventoryItem>();
+
+    void Awake()
+    {
+        if (Instance == null)
+        {
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+        else
+        {
+            Destroy(gameObject);
+            return;
+        }
+    }
 
     void Start()
     {
-        // Inicializar slots
         for (int i = 0; i < 5; i++)
         {
             inventorySlots.Add(null);
@@ -62,18 +77,15 @@ public class InventoryManager : MonoBehaviour
 
         UpdateUI();
 
-        // Buscar Main Camera
         if (fpItemHolder == null)
         {
             Camera mainCam = Camera.main;
             if (mainCam != null)
             {
                 fpItemHolder = mainCam.transform;
-                Debug.Log("? Main Camera encontrada como fpItemHolder");
             }
         }
 
-        // Buscar FlashlightFPSController
         if (flashlightController == null)
         {
             flashlightController = FindFirstObjectByType<FlashlightFPSController>();
@@ -82,38 +94,99 @@ public class InventoryManager : MonoBehaviour
 
     void Update()
     {
-        // Selección con teclas numéricas
         if (Input.GetKeyDown(KeyCode.Alpha1)) SelectSlot(0);
         if (Input.GetKeyDown(KeyCode.Alpha2)) SelectSlot(1);
         if (Input.GetKeyDown(KeyCode.Alpha3)) SelectSlot(2);
         if (Input.GetKeyDown(KeyCode.Alpha4)) SelectSlot(3);
         if (Input.GetKeyDown(KeyCode.Alpha5)) SelectSlot(4);
 
-        // Deseleccionar
         if (Input.GetKeyDown(KeyCode.Q) || Input.GetMouseButtonDown(1))
         {
             DeselectItem();
         }
     }
 
-    public void AddFlashlight()
-    {
-        if (hasFlashlight) return;
-        hasFlashlight = true;
-        AddItemToFirstEmptySlot(flashlightItem);
-    }
+    // =================== SISTEMA DE LLAVES ===================
 
     public void AddKey(KeyItem keyScript)
     {
-        if (hasKey) return;
-        hasKey = true;
+        string keyID = keyScript.keyID;
+
+        // Verificar si ya tenemos esta llave
+        if (collectedKeys.ContainsKey(keyID))
+        {
+            Debug.Log("Ya tienes esta llave: " + keyScript.keyName);
+            return;
+        }
+
+        // Crear item de inventario para la llave
+        InventoryItem keyItem = new InventoryItem
+        {
+            itemName = keyScript.keyName,
+            itemID = keyScript.keyID,
+            itemIcon = keyScript.keyIcon,
+            itemModelPrefab = keyScript.keyModelPrefab,
+            type = ItemType.Key
+        };
+
+        // Añadir a la colección de llaves
+        collectedKeys.Add(keyID, keyItem);
+
+        // Añadir al primer slot vacío
         AddItemToFirstEmptySlot(keyItem);
-        Debug.Log("Llave agregada: " + keyScript.keyName);
+
+        Debug.Log("Llave agregada al inventario: " + keyScript.keyName + " (ID: " + keyID + ")");
     }
+
+    public bool HasKey(string keyID)
+    {
+        return collectedKeys.ContainsKey(keyID);
+    }
+
+    public void UseKey(string keyID)
+    {
+        if (!collectedKeys.ContainsKey(keyID))
+        {
+            Debug.LogWarning("Intentando usar llave que no existe: " + keyID);
+            return;
+        }
+
+        InventoryItem keyItem = collectedKeys[keyID];
+
+        // Remover del inventario
+        RemoveItemByID(keyID);
+
+        // Remover del diccionario
+        collectedKeys.Remove(keyID);
+
+        Debug.Log("Llave usada y consumida: " + keyItem.itemName);
+    }
+
+    private void RemoveItemByID(string itemID)
+    {
+        for (int i = 0; i < inventorySlots.Count; i++)
+        {
+            if (inventorySlots[i] != null &&
+                inventorySlots[i].itemID == itemID)
+            {
+                inventorySlots[i] = null;
+
+                if (selectedSlotIndex == i)
+                {
+                    DeselectItem();
+                }
+
+                UpdateUI();
+                Debug.Log("Item removido del slot " + i);
+                return;
+            }
+        }
+    }
+
+    // =================== SISTEMA DE GANZÚAS ===================
 
     public void AddLockpick()
     {
-        // Solo agregar si no la tiene
         if (lockpickCount == 0)
         {
             lockpickCount = 1;
@@ -122,6 +195,29 @@ public class InventoryManager : MonoBehaviour
         }
         UpdateUI();
     }
+
+    public bool HasLockpick() => lockpickCount > 0;
+
+    public void UseLockpick()
+    {
+        // No consumir ganzúa
+        Debug.Log("Usando ganzúa (no se consume)");
+    }
+
+    public int GetLockpickCount() => lockpickCount;
+
+    // =================== SISTEMA DE LINTERNA ===================
+
+    public void AddFlashlight()
+    {
+        if (hasFlashlight) return;
+        hasFlashlight = true;
+        AddItemToFirstEmptySlot(flashlightItem);
+    }
+
+    public bool HasFlashlight() => hasFlashlight;
+
+    // =================== GESTIÓN DE SLOTS ===================
 
     private void AddItemToFirstEmptySlot(InventoryItem item)
     {
@@ -170,72 +266,30 @@ public class InventoryManager : MonoBehaviour
     {
         UnequipCurrentItem();
 
-        if (item == null)
-        {
-            Debug.LogError("? EquipItem: item es NULL");
-            return;
-        }
+        if (item == null) return;
 
-        Debug.Log("=== EQUIP: " + item.itemName + " ===");
-        Debug.Log("Type: " + item.type);
-        Debug.Log("Prefab: " + (item.itemModelPrefab != null ? item.itemModelPrefab.name : "NULL"));
-
-        // Linterna: usar el controlador especial
         if (item.type == ItemType.Flashlight)
         {
-            Debug.Log("Es LINTERNA");
             if (flashlightController != null)
             {
                 flashlightController.SetFlashlightVisibility(true);
-                Debug.Log("? Linterna visible");
-            }
-            else
-            {
-                Debug.LogError("? flashlightController es NULL");
             }
             return;
         }
 
-        // Otros items: instanciar prefab como hijo de Main Camera
-        if (item.itemModelPrefab == null)
+        if (item.itemModelPrefab != null && fpItemHolder != null)
         {
-            Debug.LogError("? itemModelPrefab es NULL para: " + item.itemName);
-            return;
-        }
-
-        if (fpItemHolder == null)
-        {
-            Debug.LogError("? fpItemHolder es NULL");
-            return;
-        }
-
-        Debug.Log("Instanciando " + item.itemModelPrefab.name + " en " + fpItemHolder.name);
-
-        // Instanciar directamente como hijo de Main Camera
-        currentFPItem = Instantiate(item.itemModelPrefab, fpItemHolder);
-
-        if (currentFPItem != null)
-        {
-            Debug.Log("? " + item.itemName + " instanciada correctamente");
-            Debug.Log("   Nombre: " + currentFPItem.name);
-            Debug.Log("   Posición local: " + currentFPItem.transform.localPosition);
-            Debug.Log("   Activo: " + currentFPItem.activeInHierarchy);
-        }
-        else
-        {
-            Debug.LogError("? Fallo al instanciar " + item.itemName);
+            currentFPItem = Instantiate(item.itemModelPrefab, fpItemHolder);
         }
     }
 
     private void UnequipCurrentItem()
     {
-        // Ocultar linterna
         if (flashlightController != null)
         {
             flashlightController.SetFlashlightVisibility(false);
         }
 
-        // Destruir item actual
         if (currentFPItem != null)
         {
             Destroy(currentFPItem);
@@ -269,35 +323,7 @@ public class InventoryManager : MonoBehaviour
         }
     }
 
-    // ================ MÉTODOS LEGACY ================
-
-    public bool HasLockpick() => lockpickCount > 0;
-
-    public void UseLockpick()
-    {
-        Debug.Log("Usando ganzúa");
-    }
-
-    public int GetLockpickCount() => lockpickCount;
-
-    public bool HasKey() => hasKey;
-
-    private void RemoveItemByType(ItemType type)
-    {
-        for (int i = 0; i < inventorySlots.Count; i++)
-        {
-            if (inventorySlots[i] != null && inventorySlots[i].type == type)
-            {
-                inventorySlots[i] = null;
-                if (selectedSlotIndex == i)
-                {
-                    DeselectItem();
-                }
-                UpdateUI();
-                return;
-            }
-        }
-    }
+    // =================== GETTERS ===================
 
     public InventoryItem GetSelectedItem()
     {
@@ -314,7 +340,7 @@ public class InventoryManager : MonoBehaviour
         return item != null ? item.type : ItemType.None;
     }
 
-    // ================ MÉTODOS PARA SISTEMA DE GUARDADO ================
+    // =================== GUARDADO ===================
 
     public void ClearInventory()
     {
@@ -324,12 +350,26 @@ public class InventoryManager : MonoBehaviour
         }
         DeselectItem();
         lockpickCount = 0;
-        hasKey = false;
         hasFlashlight = false;
+        collectedKeys.Clear();
         UpdateUI();
     }
 
-    public void SetItemAtSlot(int slotIndex, InventoryManager.InventoryItem item)
+    public List<string> GetCollectedKeyIDs()
+    {
+        return new List<string>(collectedKeys.Keys);
+    }
+
+    // =================== MÉTODOS DE COMPATIBILIDAD ===================
+
+    // Para scripts antiguos que usan HasKey() sin parámetro
+    public bool HasKey()
+    {
+        return collectedKeys.Count > 0;
+    }
+
+    // Métodos para sistema de guardado
+    public void SetItemAtSlot(int slotIndex, InventoryItem item)
     {
         if (slotIndex >= 0 && slotIndex < inventorySlots.Count)
         {
@@ -344,7 +384,8 @@ public class InventoryManager : MonoBehaviour
 
     public void SetHasKey(bool value)
     {
-        hasKey = value;
+        // Este método es legacy, ahora usamos el diccionario de llaves
+        // Lo dejamos vacío para compatibilidad
     }
 
     public void SetHasFlashlight(bool value)
@@ -352,14 +393,23 @@ public class InventoryManager : MonoBehaviour
         hasFlashlight = value;
     }
 
-    public bool HasFlashlight()
-    {
-        return hasFlashlight;
-    }
-
     public void ForceUpdateUI()
     {
         UpdateUI();
-        Debug.Log("UI del inventario actualizada forzadamente");
+    }
+
+    // Variable pública para acceso desde GameStateManager
+    public InventoryItem keyItem
+    {
+        get
+        {
+            // Retornar el primer item de tipo Key que encontremos
+            foreach (var item in inventorySlots)
+            {
+                if (item != null && item.type == ItemType.Key)
+                    return item;
+            }
+            return null;
+        }
     }
 }

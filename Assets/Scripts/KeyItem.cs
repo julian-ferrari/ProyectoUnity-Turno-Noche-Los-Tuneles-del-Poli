@@ -1,11 +1,13 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using UnityEngine.UI;
 
 public class KeyItem : MonoBehaviour
 {
     [Header("Key Settings")]
-    public string keyID = "DefaultKey"; // ID único para cada llave
+    public string keyID = "DefaultKey"; // ID Ãºnico para cada llave
     public string keyName = "Llave Misteriosa";
+    public Sprite keyIcon; // Imagen del icono de la llave para el inventario
+    public GameObject keyModelPrefab; // Modelo 3D de la llave (opcional, para primera persona)
     public bool canPickup = true;
 
     [Header("Interaction Settings")]
@@ -26,13 +28,13 @@ public class KeyItem : MonoBehaviour
     private bool isFloating = true;
     private Transform player;
     private bool playerInRange = false;
+    private bool alreadyCollected = false;
 
     void Start()
     {
         startPosition = transform.position;
         player = GameObject.FindGameObjectWithTag("Player").transform;
 
-        // Configurar collider como trigger (opcional, ya no es necesario para la interacción)
         Collider col = GetComponent<Collider>();
         if (col != null)
         {
@@ -46,24 +48,37 @@ public class KeyItem : MonoBehaviour
 
         if (pickupPrompt != null)
             pickupPrompt.SetActive(false);
+
+        // Verificar si ya fue recogida
+        CheckIfAlreadyCollected();
+    }
+
+    void CheckIfAlreadyCollected()
+    {
+        string saveKey = "Key_Collected_" + keyID;
+        if (PlayerPrefs.GetInt(saveKey, 0) == 1)
+        {
+            alreadyCollected = true;
+            gameObject.SetActive(false);
+            Debug.Log("Llave ya fue recogida: " + keyID);
+        }
     }
 
     void Update()
     {
+        if (alreadyCollected) return;
+
         if (isFloating && canPickup)
         {
-            // Efecto de flotación
             float newY = startPosition.y + Mathf.Sin(Time.time * floatSpeed) * floatHeight;
             transform.position = new Vector3(startPosition.x, newY, startPosition.z);
 
-            // Rotación
             if (rotateKey)
             {
                 transform.Rotate(0, rotationSpeed * Time.deltaTime, 0);
             }
         }
 
-        // Sistema de interacción con distancia
         if (player != null && canPickup)
         {
             float distance = Vector3.Distance(transform.position, player.position);
@@ -89,27 +104,31 @@ public class KeyItem : MonoBehaviour
     {
         if (player != null)
         {
-            PlayerController playerController = player.GetComponent<PlayerController>();
-            if (playerController != null)
+            InventoryManager inventory = FindFirstObjectByType<InventoryManager>();
+            if (inventory != null)
             {
-                playerController.PickupKey(this);
+                inventory.AddKey(this);
                 PickupEffect();
             }
             else
             {
-                Debug.LogWarning("No se encontró PlayerController en el jugador");
+                Debug.LogWarning("No se encontrÃ³ InventoryManager");
             }
         }
     }
 
     public void PickupEffect()
     {
-        // Efecto visual/sonoro al recoger
-        Debug.Log("Llave recogida: " + keyName);
+        Debug.Log("Llave recogida: " + keyName + " (ID: " + keyID + ")");
 
-        // Desactivar la llave
+        // Marcar como recogida permanentemente
+        string saveKey = "Key_Collected_" + keyID;
+        PlayerPrefs.SetInt(saveKey, 1);
+        PlayerPrefs.Save();
+
         canPickup = false;
         isFloating = false;
+        alreadyCollected = true;
         HidePrompt();
         gameObject.SetActive(false);
     }
@@ -134,5 +153,21 @@ public class KeyItem : MonoBehaviour
     {
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, pickupDistance);
+    }
+
+    // MÃ©todo pÃºblico para resetear la llave (Ãºtil para debugging)
+    public void ResetKey()
+    {
+        canPickup = true;
+        isFloating = true;
+        alreadyCollected = false;
+        gameObject.SetActive(true);
+
+        // Borrar PlayerPrefs
+        string saveKey = "Key_Collected_" + keyID;
+        PlayerPrefs.DeleteKey(saveKey);
+        PlayerPrefs.Save();
+
+        Debug.Log($"Llave reseteada: {keyName} ({keyID})");
     }
 }

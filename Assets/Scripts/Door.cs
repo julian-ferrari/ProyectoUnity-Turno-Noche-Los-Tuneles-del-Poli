@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 
 public class Door : MonoBehaviour
 {
@@ -8,34 +9,36 @@ public class Door : MonoBehaviour
     public bool isOpen = false;
 
     [Header("Door Animation")]
-    public Transform doorPivot; // Arrastra aquí la puerta
+    public Transform doorPivot;
     public float openAngle = 90f;
     public float openSpeed = 2f;
     public bool openInward = false;
 
     [Header("Manual Pivot Setup")]
-    [Tooltip("Ajusta estos valores si la puerta se posiciona mal")]
-    public Vector3 pivotOffset = new Vector3(-0.5f, 0, 0); // Donde están las bisagras
+    public Vector3 pivotOffset = new Vector3(-0.5f, 0, 0);
 
     [Header("Interaction")]
-    [Tooltip("Distancia máxima para interactuar con la puerta")]
     public float interactionRange = 2f;
-    [Tooltip("Tamaño del trigger de detección (recomendado: un poco más grande que interactionRange)")]
     public float triggerSize = 3f;
     public string lockedMessage = "La puerta está cerrada. Necesitas una llave.";
     public string openMessage = "Presiona E para abrir/cerrar";
     public string unlockMessage = "¡Puerta desbloqueada!";
+    public string wrongKeyMessage = "Esta llave no abre esta puerta";
 
     [Header("Audio")]
     public AudioSource audioSource;
     [Space(5)]
-    public AudioClip doorOpenSound; // Sonido de puerta abriéndose normalmente
-    public AudioClip doorCloseSound; // Sonido de puerta cerrándose
-    public AudioClip doorUnlockSound; // Sonido al desbloquear con llave
-    public AudioClip doorLockedSound; // Sonido al intentar abrir puerta cerrada
+    public AudioClip doorOpenSound;
+    public AudioClip doorCloseSound;
+    public AudioClip doorUnlockSound;
+    public AudioClip doorLockedSound;
     [Space(5)]
     public float doorSoundVolume = 0.7f;
     public float unlockSoundVolume = 0.8f;
+
+    [Header("UI Message")]
+    public Text feedbackText;
+    public float messageDuration = 2f;
 
     private Vector3 originalPosition;
     private Quaternion originalRotation;
@@ -43,59 +46,71 @@ public class Door : MonoBehaviour
     private bool isAnimating = false;
     private PlayerController nearbyPlayer;
     private Transform playerTransform;
+    private bool doorUnlocked = false; // Para que la puerta permanezca desbloqueada
 
     void Start()
     {
         if (doorPivot == null)
             doorPivot = transform;
 
-        // Guardar estado original
         originalPosition = doorPivot.position;
         originalRotation = doorPivot.rotation;
 
-        // Auto-detectar pivot basado en el bounds del objeto
         AutoDetectPivot();
-
-        // Calcular posición del pivot en coordenadas del mundo
         pivotWorldPosition = doorPivot.TransformPoint(pivotOffset);
 
         SetupTrigger();
         SetupAudio();
 
-        Debug.Log($"Puerta configurada - Pivot en: {pivotWorldPosition}, Distancia interacción: {interactionRange}m");
+        // Verificar si la puerta ya fue desbloqueada anteriormente
+        CheckIfUnlocked();
+
+        Debug.Log($"Puerta configurada - ID requerido: {requiredKeyID}, Distancia: {interactionRange}m");
+    }
+
+    void CheckIfUnlocked()
+    {
+        string saveKey = "Door_Unlocked_" + requiredKeyID + "_" + transform.position.ToString();
+        if (PlayerPrefs.GetInt(saveKey, 0) == 1)
+        {
+            isLocked = false;
+            doorUnlocked = true;
+            Debug.Log("Puerta permanece desbloqueada: " + requiredKeyID);
+        }
+    }
+
+    void SaveUnlockedState()
+    {
+        string saveKey = "Door_Unlocked_" + requiredKeyID + "_" + transform.position.ToString();
+        PlayerPrefs.SetInt(saveKey, 1);
+        PlayerPrefs.Save();
     }
 
     void SetupAudio()
     {
-        // Configurar AudioSource si no existe
         if (audioSource == null)
         {
             audioSource = gameObject.AddComponent<AudioSource>();
-            audioSource.spatialBlend = 1f; // 3D sound
+            audioSource.spatialBlend = 1f;
             audioSource.minDistance = 3f;
             audioSource.maxDistance = 15f;
             audioSource.rolloffMode = AudioRolloffMode.Linear;
             audioSource.playOnAwake = false;
         }
-
-        Debug.Log("Sistema de audio de puerta configurado");
     }
 
     void Update()
     {
-        // Verificar distancia constantemente si hay un jugador cerca
         if (nearbyPlayer != null && playerTransform != null)
         {
             float distance = Vector3.Distance(transform.position, playerTransform.position);
 
-            // Si el jugador se aleja más de la distancia de interacción
             if (distance > interactionRange)
             {
                 nearbyPlayer.HideInteractionMessage();
             }
             else
             {
-                // Mostrar mensaje apropiado según el estado
                 if (isLocked)
                 {
                     nearbyPlayer.ShowInteractionMessage(lockedMessage);
@@ -116,16 +131,8 @@ public class Door : MonoBehaviour
             if (rend != null)
             {
                 Bounds bounds = rend.bounds;
-
-                // Convertir bounds a espacio local
                 Vector3 localMin = doorPivot.InverseTransformPoint(bounds.min);
-                Vector3 localMax = doorPivot.InverseTransformPoint(bounds.max);
-
-                // Determinar qué lado es más cercano al centro para el pivot
-                // Por defecto usamos el lado izquierdo (menor X)
                 pivotOffset = new Vector3(localMin.x, 0, 0);
-
-                Debug.Log($"Pivot auto-detectado: {pivotOffset}");
             }
         }
     }
@@ -141,7 +148,6 @@ public class Door : MonoBehaviour
 
             BoxCollider triggerCol = trigger.AddComponent<BoxCollider>();
             triggerCol.isTrigger = true;
-            // Usar triggerSize en lugar de interactionRange para el área de detección
             triggerCol.size = new Vector3(triggerSize, 2f, triggerSize);
 
             DoorTrigger doorTrigger = trigger.AddComponent<DoorTrigger>();
@@ -154,7 +160,6 @@ public class Door : MonoBehaviour
         nearbyPlayer = player;
         playerTransform = player.transform;
 
-        // Verificar distancia real antes de mostrar mensaje
         float distance = Vector3.Distance(transform.position, playerTransform.position);
 
         if (distance <= interactionRange)
@@ -179,28 +184,76 @@ public class Door : MonoBehaviour
 
     public void TryInteract(PlayerController player)
     {
-        // Verificar distancia real antes de permitir interacción
         float distance = Vector3.Distance(transform.position, player.transform.position);
 
         if (distance > interactionRange)
         {
-            Debug.Log($"Demasiado lejos para interactuar. Distancia: {distance:F2}m, Máximo: {interactionRange}m");
+            Debug.Log($"Demasiado lejos. Distancia: {distance:F2}m");
             return;
         }
 
         if (isLocked)
         {
-            if (player.HasKey(requiredKeyID))
+            // Verificar si el jugador tiene alguna llave
+            InventoryManager inventory = InventoryManager.Instance;
+            if (inventory == null)
             {
-                UnlockDoor(player);
+                ShowFeedback("Error: No se encontró el inventario");
+                return;
+            }
+
+            // Verificar si tiene la llave correcta en el inventario
+            if (inventory.HasKey(requiredKeyID))
+            {
+                // Tiene la llave correcta, verificar si la tiene equipada
+                InventoryManager.InventoryItem selectedItem = inventory.GetSelectedItem();
+
+                if (selectedItem == null || selectedItem.type != InventoryManager.ItemType.Key)
+                {
+                    // Tiene la llave pero no la tiene equipada
+                    ShowFeedback("Equipa la llave correcta (presiona su número de slot)");
+                    PlaySound(doorLockedSound, doorSoundVolume);
+                    Debug.Log("Tienes la llave pero no está equipada");
+                    return;
+                }
+
+                // Verificar que la llave equipada es la correcta
+                if (selectedItem.itemID == requiredKeyID)
+                {
+                    UnlockDoor();
+                }
+                else
+                {
+                    ShowFeedback(wrongKeyMessage);
+                    PlaySound(doorLockedSound, doorSoundVolume);
+                    Debug.Log("Llave equipada incorrecta");
+                }
             }
             else
             {
-                // Reproducir sonido de puerta cerrada
-                PlaySound(doorLockedSound, doorSoundVolume);
+                // No tiene la llave correcta
+                // Verificar si tiene alguna otra llave
+                var collectedKeys = inventory.GetCollectedKeyIDs();
+                if (collectedKeys.Count > 0)
+                {
+                    // Verificar si tiene alguna equipada
+                    InventoryManager.InventoryItem selectedItem = inventory.GetSelectedItem();
+                    if (selectedItem != null && selectedItem.type == InventoryManager.ItemType.Key)
+                    {
+                        ShowFeedback(wrongKeyMessage);
+                    }
+                    else
+                    {
+                        ShowFeedback("Equipa una llave para intentar abrir");
+                    }
+                }
+                else
+                {
+                    ShowFeedback("Necesitas encontrar una llave para abrir esta puerta");
+                }
 
-                Debug.Log("No tienes la llave correcta!");
-                player.ShowInteractionMessage("No tienes la llave correcta!");
+                PlaySound(doorLockedSound, doorSoundVolume);
+                Debug.Log("No tienes la llave correcta. Necesitas: " + requiredKeyID);
             }
         }
         else
@@ -209,13 +262,22 @@ public class Door : MonoBehaviour
         }
     }
 
-    void UnlockDoor(PlayerController player)
+    void UnlockDoor()
     {
         isLocked = false;
-        player.UseKey(requiredKeyID);
-        player.ShowInteractionMessage(unlockMessage);
+        doorUnlocked = true;
 
-        // Reproducir sonido de desbloqueo con llave
+        // Usar la llave (la consume del inventario)
+        InventoryManager inventory = InventoryManager.Instance;
+        if (inventory != null)
+        {
+            inventory.UseKey(requiredKeyID);
+        }
+
+        // Guardar estado desbloqueado
+        SaveUnlockedState();
+
+        ShowFeedback(unlockMessage);
         PlaySound(doorUnlockSound, unlockSoundVolume);
 
         Debug.Log("¡Puerta desbloqueada con " + requiredKeyID + "!");
@@ -229,7 +291,6 @@ public class Door : MonoBehaviour
         {
             isOpen = !isOpen;
 
-            // Reproducir sonido apropiado
             if (isOpen)
             {
                 PlaySound(doorOpenSound, doorSoundVolume);
@@ -251,7 +312,35 @@ public class Door : MonoBehaviour
         }
     }
 
-    // MÉTODO CORREGIDO - SIN ACUMULACIÓN DE ROTACIONES
+    void ShowFeedback(string message)
+    {
+        // Intentar usar el Text local primero
+        if (feedbackText != null)
+        {
+            feedbackText.text = message;
+            feedbackText.gameObject.SetActive(true);
+            CancelInvoke("HideFeedback");
+            Invoke("HideFeedback", messageDuration);
+        }
+        // Si no hay Text local, usar el sistema global
+        else if (FeedbackUIManager.Instance != null)
+        {
+            FeedbackUIManager.Instance.ShowMessage(message, messageDuration);
+        }
+        else
+        {
+            Debug.LogWarning("No hay sistema de feedback disponible. Mensaje: " + message);
+        }
+    }
+
+    void HideFeedback()
+    {
+        if (feedbackText != null)
+        {
+            feedbackText.gameObject.SetActive(false);
+        }
+    }
+
     System.Collections.IEnumerator AnimateDoor()
     {
         isAnimating = true;
@@ -266,30 +355,19 @@ public class Door : MonoBehaviour
         {
             elapsedTime += Time.deltaTime;
             float t = Mathf.SmoothStep(0f, 1f, elapsedTime / duration);
-
-            // Calcular el ángulo actual sin acumulación
             float currentAngle = Mathf.Lerp(startAngle, endAngle, t);
-
-            // Aplicar la rotación desde la posición original
             ApplyDoorRotation(currentAngle);
-
             yield return null;
         }
 
-        // Aplicar rotación final
         ApplyDoorRotation(endAngle);
-
         isAnimating = false;
-        Debug.Log("Puerta " + (isOpen ? "abierta" : "cerrada") + " - Ángulo: " + endAngle);
     }
 
     void ApplyDoorRotation(float angle)
     {
-        // Resetear a posición y rotación original
         doorPivot.position = originalPosition;
         doorPivot.rotation = originalRotation;
-
-        // Aplicar rotación alrededor del pivot
         doorPivot.RotateAround(pivotWorldPosition, Vector3.up, angle);
     }
 
@@ -297,110 +375,18 @@ public class Door : MonoBehaviour
     {
         Transform pivot = doorPivot != null ? doorPivot : transform;
 
-        // Mostrar rango REAL de interacción (verde)
         Gizmos.color = Color.green;
         Gizmos.DrawWireSphere(transform.position, interactionRange);
 
-        // Mostrar área del trigger (amarillo transparente)
         Gizmos.color = new Color(1f, 1f, 0f, 0.3f);
         Gizmos.DrawWireCube(transform.position, new Vector3(triggerSize, 2f, triggerSize));
 
-        // Mostrar punto de pivot
         Vector3 pivotPos = Application.isPlaying ? pivotWorldPosition : pivot.TransformPoint(pivotOffset);
         Gizmos.color = Color.red;
         Gizmos.DrawSphere(pivotPos, 0.15f);
 
-        // Mostrar dirección de apertura
         Gizmos.color = isOpen ? Color.red : Color.blue;
         Vector3 direction = pivot.right * (openInward ? -1 : 1);
         Gizmos.DrawRay(pivot.position, direction * 2f);
-
-        // Mostrar línea del pivot
-        Gizmos.color = Color.cyan;
-        Gizmos.DrawLine(pivot.position, pivotPos);
-    }
-
-    // MÉTODOS PARA CONFIGURAR PIVOT FÁCILMENTE
-    [ContextMenu("Auto-detectar Pivot Izquierdo")]
-    void SetPivotLeft()
-    {
-        if (doorPivot != null)
-        {
-            Renderer rend = doorPivot.GetComponent<Renderer>();
-            if (rend != null)
-            {
-                Bounds bounds = rend.bounds;
-                Vector3 localBounds = doorPivot.InverseTransformPoint(bounds.min);
-                pivotOffset = new Vector3(localBounds.x, 0, 0);
-                Debug.Log("Pivot configurado a la izquierda: " + pivotOffset);
-
-                // Recalcular pivot world position
-                if (Application.isPlaying)
-                {
-                    pivotWorldPosition = doorPivot.TransformPoint(pivotOffset);
-                }
-            }
-        }
-    }
-
-    [ContextMenu("Auto-detectar Pivot Derecho")]
-    void SetPivotRight()
-    {
-        if (doorPivot != null)
-        {
-            Renderer rend = doorPivot.GetComponent<Renderer>();
-            if (rend != null)
-            {
-                Bounds bounds = rend.bounds;
-                Vector3 localBounds = doorPivot.InverseTransformPoint(bounds.max);
-                pivotOffset = new Vector3(localBounds.x, 0, 0);
-                Debug.Log("Pivot configurado a la derecha: " + pivotOffset);
-
-                // Recalcular pivot world position
-                if (Application.isPlaying)
-                {
-                    pivotWorldPosition = doorPivot.TransformPoint(pivotOffset);
-                }
-            }
-        }
-    }
-
-    [ContextMenu("Resetear Puerta")]
-    void ResetDoor()
-    {
-        if (Application.isPlaying)
-        {
-            doorPivot.position = originalPosition;
-            doorPivot.rotation = originalRotation;
-            isOpen = false;
-            isAnimating = false;
-            Debug.Log("Puerta reseteada a posición original");
-        }
-    }
-
-    [ContextMenu("Reconfigurar Trigger")]
-    void ReconfigureTrigger()
-    {
-        SetupTrigger();
-        Debug.Log($"Trigger reconfigurado - Trigger size: {triggerSize}, Interaction range: {interactionRange}");
-    }
-
-    [ContextMenu("Debug Info")]
-    void DebugInfo()
-    {
-        Transform triggerChild = transform.Find("DoorTrigger");
-        if (triggerChild != null)
-        {
-            BoxCollider triggerCol = triggerChild.GetComponent<BoxCollider>();
-            if (triggerCol != null)
-            {
-                Debug.Log($"Trigger actual - Size: {triggerCol.size}, IsTrigger: {triggerCol.isTrigger}");
-            }
-        }
-        else
-        {
-            Debug.Log("No se encontró DoorTrigger child object");
-        }
-        Debug.Log($"Interaction Range: {interactionRange}m, Trigger Size: {triggerSize}m");
     }
 }

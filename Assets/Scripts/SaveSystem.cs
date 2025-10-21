@@ -19,13 +19,12 @@ public class SaveData
     public List<string> inventoryItemNames = new List<string>();
     public int selectedSlotIndex = -1;
     public int lockpickCount = 0;
-    public bool hasKey = false;
     public bool hasFlashlight = false;
 
     // Guardias (puede haber múltiples)
     public List<GuardSaveData> guards = new List<GuardSaveData>();
 
-    // Items recogidos (solo llaves, la ganzúa es única y permanente)
+    // Items recogidos (llaves y ganzúa)
     public List<string> collectedKeyIDs = new List<string>();
     public bool hasCollectedLockpick = false;
 }
@@ -69,7 +68,7 @@ public static class SaveSystem
         }
 
         // Guardar inventario
-        InventoryManager inventory = Object.FindFirstObjectByType<InventoryManager>();
+        InventoryManager inventory = InventoryManager.Instance;
         if (inventory != null)
         {
             SaveInventory(data, inventory);
@@ -131,7 +130,7 @@ public static class SaveSystem
         }
 
         // Guardar si ya recogió la ganzúa (solo hay una y es permanente)
-        InventoryManager inventory = Object.FindFirstObjectByType<InventoryManager>();
+        InventoryManager inventory = InventoryManager.Instance;
         if (inventory != null)
         {
             data.hasCollectedLockpick = inventory.HasLockpick();
@@ -159,10 +158,13 @@ public static class SaveSystem
         // Guardar estado del inventario
         data.selectedSlotIndex = inventory.selectedSlotIndex;
         data.lockpickCount = inventory.GetLockpickCount();
-        data.hasKey = inventory.HasKey();
         data.hasFlashlight = inventory.HasFlashlight();
 
-        Debug.Log($"Inventario guardado - Lockpicks: {data.lockpickCount}, Key: {data.hasKey}, Flashlight: {data.hasFlashlight}");
+        // Guardar llaves coleccionadas
+        List<string> collectedKeys = inventory.GetCollectedKeyIDs();
+        data.collectedKeyIDs.AddRange(collectedKeys);
+
+        Debug.Log($"Inventario guardado - Lockpicks: {data.lockpickCount}, Llaves: {collectedKeys.Count}, Flashlight: {data.hasFlashlight}");
     }
 
     public static SaveData LoadGame()

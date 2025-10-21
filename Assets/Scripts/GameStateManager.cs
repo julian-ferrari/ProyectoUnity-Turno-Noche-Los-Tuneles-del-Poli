@@ -89,7 +89,7 @@ public class GameStateManager : MonoBehaviour
 
     void RestoreInventory(SaveData data)
     {
-        InventoryManager inventory = FindFirstObjectByType<InventoryManager>();
+        InventoryManager inventory = InventoryManager.Instance;
 
         if (inventory == null)
         {
@@ -102,7 +102,7 @@ public class GameStateManager : MonoBehaviour
         // Limpiar inventario actual
         inventory.ClearInventory();
 
-        // Restaurar items
+        // Restaurar items en los slots
         for (int i = 0; i < data.inventoryItemNames.Count && i < 5; i++)
         {
             string itemName = data.inventoryItemNames[i];
@@ -118,23 +118,22 @@ public class GameStateManager : MonoBehaviour
             }
         }
 
-        // Restaurar contadores y estado
+        // Restaurar contadores
         inventory.SetLockpickCount(data.lockpickCount);
-        inventory.SetHasKey(data.hasKey);
         inventory.SetHasFlashlight(data.hasFlashlight);
 
-        // Restaurar selección (sin equipar todavía)
+        // Restaurar selección
         if (data.selectedSlotIndex >= 0 && data.selectedSlotIndex < 5)
         {
             inventory.SelectSlot(data.selectedSlotIndex);
         }
 
-        // IMPORTANTE: Forzar actualización de UI
+        // Actualizar UI
         inventory.ForceUpdateUI();
 
         Debug.Log($"✓ Inventario restaurado:");
         Debug.Log($"  Lockpicks: {data.lockpickCount}");
-        Debug.Log($"  Llave: {data.hasKey}");
+        Debug.Log($"  Llaves: {data.collectedKeyIDs.Count}");
         Debug.Log($"  Linterna: {data.hasFlashlight}");
         Debug.Log($"  Slot seleccionado: {data.selectedSlotIndex}");
     }
@@ -196,7 +195,7 @@ public class GameStateManager : MonoBehaviour
             }
         }
 
-        // Eliminar ganzúa si ya fue recogida (solo hay una)
+        // Eliminar ganzúa si ya fue recogida
         if (data.hasCollectedLockpick)
         {
             LockpickItem[] lockpicks = FindObjectsByType<LockpickItem>(FindObjectsInactive.Include, FindObjectsSortMode.None);
@@ -211,13 +210,30 @@ public class GameStateManager : MonoBehaviour
 
     InventoryManager.InventoryItem GetItemByName(InventoryManager inventory, string itemName)
     {
-        // Buscar el item correspondiente en el InventoryManager
-        if (itemName == inventory.flashlightItem.itemName)
+        // Comparar con los items base del inventario
+        if (inventory.flashlightItem != null && itemName == inventory.flashlightItem.itemName)
             return inventory.flashlightItem;
-        if (itemName == inventory.keyItem.itemName)
-            return inventory.keyItem;
-        if (itemName == inventory.lockpickItem.itemName)
+
+        if (inventory.lockpickItem != null && itemName == inventory.lockpickItem.itemName)
             return inventory.lockpickItem;
+
+        // Para llaves, necesitamos buscar en todos los KeyItem de la escena
+        KeyItem[] allKeys = FindObjectsByType<KeyItem>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (KeyItem keyScript in allKeys)
+        {
+            if (keyScript.keyName == itemName)
+            {
+                // Crear un InventoryItem temporal para esta llave
+                return new InventoryManager.InventoryItem
+                {
+                    itemName = keyScript.keyName,
+                    itemID = keyScript.keyID,
+                    itemIcon = keyScript.keyIcon,
+                    itemModelPrefab = keyScript.keyModelPrefab,
+                    type = InventoryManager.ItemType.Key
+                };
+            }
+        }
 
         Debug.LogWarning($"Item no encontrado: {itemName}");
         return null;
@@ -233,11 +249,12 @@ public class GameStateManager : MonoBehaviour
             Debug.Log($"Escena: {SceneManager.GetActiveScene().name}");
             Debug.Log($"Jugador: {player.transform.position}");
 
-            InventoryManager inv = FindFirstObjectByType<InventoryManager>();
+            InventoryManager inv = InventoryManager.Instance;
             if (inv != null)
             {
                 Debug.Log($"Inventario: {inv.inventorySlots.Count} slots");
                 Debug.Log($"Lockpicks: {inv.GetLockpickCount()}");
+                Debug.Log($"Llaves: {inv.GetCollectedKeyIDs().Count}");
             }
 
             GuardAI[] guards = FindObjectsByType<GuardAI>(FindObjectsSortMode.None);
