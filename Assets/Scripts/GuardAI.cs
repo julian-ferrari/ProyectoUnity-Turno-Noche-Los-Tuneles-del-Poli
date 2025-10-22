@@ -14,7 +14,7 @@ public class GuardAI : MonoBehaviour
     public float fieldOfViewAngle = 90f;
 
     [Header("Chasing")]
-    public float chaseSpeed = 4f;
+    public float chaseSpeed = 16f;
     public float investigateTime = 10f;
     public float maxChaseDistance = 20f;
     public float captureDistance = 1.5f;
@@ -706,21 +706,88 @@ public class GuardAI : MonoBehaviour
 
     void MoveTowards(Vector3 target, float speed)
     {
-        // Crear dirección solo en el plano horizontal (ignorar Y)
         Vector3 horizontalTarget = new Vector3(target.x, transform.position.y, target.z);
         Vector3 direction = (horizontalTarget - transform.position).normalized;
 
+        // Detectar paredes adelante
+        RaycastHit hit;
+        float checkDistance = 1.5f;
+        bool wallAhead = false;
+
+        // Raycast desde el centro del guardia
+        Vector3 rayOrigin = transform.position + Vector3.up * 1f;
+
+        if (Physics.Raycast(rayOrigin, direction, out hit, checkDistance))
+        {
+            // Si hay una pared (no es el jugador)
+            if (!hit.collider.CompareTag("Player"))
+            {
+                wallAhead = true;
+
+                // Intentar girar a la derecha
+                Vector3 rightDir = Quaternion.Euler(0, 45, 0) * direction;
+                if (!Physics.Raycast(rayOrigin, rightDir, checkDistance))
+                {
+                    direction = rightDir;
+                    wallAhead = false;
+                }
+                else
+                {
+                    // Intentar girar a la izquierda
+                    Vector3 leftDir = Quaternion.Euler(0, -45, 0) * direction;
+                    if (!Physics.Raycast(rayOrigin, leftDir, checkDistance))
+                    {
+                        direction = leftDir;
+                        wallAhead = false;
+                    }
+                    else
+                    {
+                        // Intentar ángulo más pronunciado a la derecha
+                        Vector3 rightDir90 = Quaternion.Euler(0, 90, 0) * direction;
+                        if (!Physics.Raycast(rayOrigin, rightDir90, checkDistance))
+                        {
+                            direction = rightDir90;
+                            wallAhead = false;
+                        }
+                        else
+                        {
+                            // Intentar ángulo más pronunciado a la izquierda
+                            Vector3 leftDir90 = Quaternion.Euler(0, -90, 0) * direction;
+                            if (!Physics.Raycast(rayOrigin, leftDir90, checkDistance))
+                            {
+                                direction = leftDir90;
+                                wallAhead = false;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Si está bloqueado completamente, no moverse
+        if (wallAhead)
+        {
+            return;
+        }
+
+        // Mover usando Rigidbody
         Rigidbody guardRb = GetComponent<Rigidbody>();
         if (guardRb != null)
         {
             guardRb.freezeRotation = true;
             Vector3 movement = direction * speed * Time.fixedDeltaTime;
             Vector3 newPosition = guardRb.position + movement;
-            guardRb.MovePosition(newPosition);
 
-            if (guardRb.linearVelocity.magnitude > speed)
+            // Verificar que la nueva posición sea segura
+            if (Mathf.Abs(newPosition.y - transform.position.y) < 1f) // No permitir cambios bruscos de altura
             {
-                guardRb.linearVelocity = guardRb.linearVelocity.normalized * speed;
+                guardRb.MovePosition(newPosition);
+
+                // Limitar velocidad
+                if (guardRb.linearVelocity.magnitude > speed)
+                {
+                    guardRb.linearVelocity = guardRb.linearVelocity.normalized * speed;
+                }
             }
         }
         else
@@ -728,11 +795,10 @@ public class GuardAI : MonoBehaviour
             transform.position += direction * speed * Time.deltaTime;
         }
 
-        // CORREGIDO: Rotar solo en el eje Y
+        // Rotar hacia la dirección de movimiento
         if (direction != Vector3.zero)
         {
             Quaternion targetRotation = Quaternion.LookRotation(direction);
-            // Mantener solo la rotación Y
             targetRotation = Quaternion.Euler(0f, targetRotation.eulerAngles.y, 0f);
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 5f);
         }
@@ -789,7 +855,13 @@ public class GuardAI : MonoBehaviour
         }
 
         float currentSpeed = GetCurrentSpeed();
-        Debug.Log("Actualizando Speed a: " + currentSpeed);
+
+        // Si está esperando en un punto de patrulla, forzar speed a 0
+        if (currentState == GuardState.Patrolling && waitTimer > 0f)
+        {
+            currentSpeed = 0f;
+        }
+
         guardAnimator.SetFloat("Speed", currentSpeed);
         guardAnimator.SetBool("IsChasing", currentState == GuardState.Chasing);
         guardAnimator.SetBool("IsInvestigating", currentState == GuardState.Investigating);
