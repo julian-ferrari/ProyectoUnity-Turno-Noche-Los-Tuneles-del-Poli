@@ -244,9 +244,14 @@ public class PlayerController : MonoBehaviour
             HandleCrouch();
         }
 
+        // MODIFICADO: Solo permitir F si la linterna está equipada
         if (Input.GetKeyDown(KeyCode.F))
         {
-            ToggleFlashlight();
+            InventoryManager inventory = FindFirstObjectByType<InventoryManager>();
+            if (inventory != null && inventory.GetSelectedItemType() == InventoryManager.ItemType.Flashlight)
+            {
+                ToggleFlashlight();
+            }
         }
 
         if (Input.GetKeyDown(KeyCode.E))
@@ -383,26 +388,8 @@ public class PlayerController : MonoBehaviour
         if (flashlight != null)
         {
             flashlight.enabled = !flashlight.enabled;
-
-            foreach (Transform child in playerCamera.transform)
-            {
-                if (child.GetComponent<Light>() == null)
-                {
-                    child.gameObject.SetActive(true);
-
-                    Renderer rend = child.GetComponent<Renderer>();
-                    if (rend != null)
-                    {
-                        rend.enabled = true;
-                    }
-
-                    MeshRenderer mesh = child.GetComponent<MeshRenderer>();
-                    if (mesh != null)
-                    {
-                        mesh.enabled = true;
-                    }
-                }
-            }
+            // Comentamos el foreach que activaba todo
+            // Ya no es necesario porque FlashlightFPSController maneja la visibilidad
         }
         else
         {

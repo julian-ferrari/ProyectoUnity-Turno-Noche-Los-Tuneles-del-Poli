@@ -75,6 +75,9 @@ public class InventoryManager : MonoBehaviour
         hasFlashlight = true;
         inventorySlots[0] = flashlightItem;
 
+        // NUEVO: Seleccionar automáticamente el slot 0 (linterna) al inicio
+        selectedSlotIndex = 0;
+
         UpdateUI();
 
         if (fpItemHolder == null)
@@ -90,6 +93,12 @@ public class InventoryManager : MonoBehaviour
         {
             flashlightController = FindFirstObjectByType<FlashlightFPSController>();
         }
+
+        // NUEVO: Equipar la linterna al inicio
+        if (flashlightController != null)
+        {
+            flashlightController.SetFlashlightVisibility(true);
+        }
     }
 
     void Update()
@@ -100,10 +109,11 @@ public class InventoryManager : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Alpha4)) SelectSlot(3);
         if (Input.GetKeyDown(KeyCode.Alpha5)) SelectSlot(4);
 
+        /*
         if (Input.GetKeyDown(KeyCode.Q) || Input.GetMouseButtonDown(1))
         {
             DeselectItem();
-        }
+        } */
     }
 
     // =================== SISTEMA DE LLAVES ===================
@@ -249,6 +259,25 @@ public class InventoryManager : MonoBehaviour
             return;
         }
 
+        // Si estamos cambiando DESDE la linterna A otro item
+        if (selectedSlotIndex >= 0 &&
+            inventorySlots[selectedSlotIndex] != null &&
+            inventorySlots[selectedSlotIndex].type == ItemType.Flashlight)
+        {
+            // Apagar la luz
+            PlayerController player = FindFirstObjectByType<PlayerController>();
+            if (player != null && player.flashlight != null)
+            {
+                player.flashlight.enabled = false;
+            }
+
+            // Ocultar el modelo de la linterna
+            if (flashlightController != null)
+            {
+                flashlightController.SetFlashlightVisibility(false);
+            }
+        }
+
         selectedSlotIndex = index;
         UpdateUI();
         EquipItem(inventorySlots[index]);
@@ -257,14 +286,43 @@ public class InventoryManager : MonoBehaviour
 
     public void DeselectItem()
     {
+        // Guardar el item que estaba seleccionado antes de deseleccionar
+        InventoryItem previousItem = null;
+        if (selectedSlotIndex >= 0 && selectedSlotIndex < inventorySlots.Count)
+        {
+            previousItem = inventorySlots[selectedSlotIndex];
+        }
+
         selectedSlotIndex = -1;
         UpdateUI();
+
+        // Si el item anterior era la linterna, ocultarla
+        if (previousItem != null && previousItem.type == ItemType.Flashlight)
+        {
+            if (flashlightController != null)
+            {
+                flashlightController.SetFlashlightVisibility(false);
+            }
+
+            // También apagar la luz
+            PlayerController player = FindFirstObjectByType<PlayerController>();
+            if (player != null && player.flashlight != null)
+            {
+                player.flashlight.enabled = false;
+            }
+        }
+
         UnequipCurrentItem();
     }
 
     private void EquipItem(InventoryItem item)
     {
-        UnequipCurrentItem();
+        // Solo desequipar items que NO sean linterna
+        if (currentFPItem != null)
+        {
+            currentFPItem.SetActive(false);
+            currentFPItem = null;
+        }
 
         if (item == null) return;
 
@@ -277,22 +335,35 @@ public class InventoryManager : MonoBehaviour
             return;
         }
 
+        // Este código solo se ejecuta para llave y ganzúa
         if (item.itemModelPrefab != null && fpItemHolder != null)
         {
-            currentFPItem = Instantiate(item.itemModelPrefab, fpItemHolder);
+            Transform existingModel = fpItemHolder.Find(item.itemModelPrefab.name);
+
+            if (existingModel != null)
+            {
+                currentFPItem = existingModel.gameObject;
+                currentFPItem.SetActive(true);
+                Debug.Log($"Modelo encontrado y activado: {item.itemName}");
+            }
+            else
+            {
+                currentFPItem = Instantiate(item.itemModelPrefab, fpItemHolder);
+                Debug.Log($"Modelo instanciado: {item.itemName}");
+            }
         }
     }
 
     private void UnequipCurrentItem()
     {
-        if (flashlightController != null)
-        {
-            flashlightController.SetFlashlightVisibility(false);
-        }
+        // NO desactivar la linterna con el FlashlightController
+        // Solo apagar la LUZ si está encendida, pero mantener el modelo visible
+        // (El FlashlightController maneja su propia visibilidad)
 
+        // Solo desactivar currentFPItem (llave y ganzúa)
         if (currentFPItem != null)
         {
-            Destroy(currentFPItem);
+            currentFPItem.SetActive(false);
             currentFPItem = null;
         }
     }

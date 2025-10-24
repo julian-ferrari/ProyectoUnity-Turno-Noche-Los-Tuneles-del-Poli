@@ -239,16 +239,14 @@ public class FlashlightFPSController : MonoBehaviour
             return;
         }
 
-        flashlightVisible = !flashlightVisible;
-        flashlightInstance.SetActive(flashlightVisible);
+        // MODIFICADO: Solo cambiar el estado de la LUZ, no del modelo
+        isLightOn = !isLightOn;
 
-        Debug.Log($"✅ Estado cambiado a: {flashlightVisible}");
-        Debug.Log($"✅ GameObject activo: {flashlightInstance.activeInHierarchy}");
-
-        // Test de luz
+        // El modelo siempre visible cuando está equipado
+        // Solo cambiamos la luz
         if (flashlightLight != null)
         {
-            flashlightLight.enabled = flashlightVisible;
+            flashlightLight.enabled = isLightOn;
             Debug.Log($"💡 Luz: {flashlightLight.enabled}");
         }
         else
@@ -295,6 +293,14 @@ public class FlashlightFPSController : MonoBehaviour
         {
             flashlightVisible = visible;
             flashlightInstance.SetActive(visible);
+
+            // Si se oculta la linterna, también apagar la luz
+            if (!visible && flashlightLight != null)
+            {
+                flashlightLight.enabled = false;
+                isLightOn = false;
+            }
+
             Debug.Log($"SetFlashlightVisibility: {visible}");
         }
     }
