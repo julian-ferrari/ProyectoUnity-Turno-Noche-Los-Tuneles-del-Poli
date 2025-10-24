@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using System.Collections;
 
 public class MainMenuManager : MonoBehaviour
 {
@@ -8,9 +9,28 @@ public class MainMenuManager : MonoBehaviour
     public Button continueButton;
     public Button newGameButton;
 
+    private bool isInitialized = false;
+
     void Start()
     {
+        // Asegurar que el cursor esté visible y desbloqueado en el menú
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+
+        // Esperar un frame antes de inicializar para asegurar que todo esté listo
+        StartCoroutine(InitializeAfterFrame());
+    }
+
+    IEnumerator InitializeAfterFrame()
+    {
+        // Esperar hasta el final del frame
+        yield return new WaitForEndOfFrame();
+
+        // Inicializar
         UpdateContinueButton();
+        isInitialized = true;
+
+        Debug.Log("MainMenuManager inicializado correctamente");
     }
 
     void UpdateContinueButton()
@@ -33,19 +53,42 @@ public class MainMenuManager : MonoBehaviour
 
     public void NewGame()
     {
+        if (!isInitialized)
+        {
+            Debug.LogWarning("MainMenu no está inicializado, esperando...");
+            StartCoroutine(WaitAndExecute(() => NewGame()));
+            return;
+        }
+
         Debug.Log("=== NUEVA PARTIDA - INICIANDO SISTEMA DE NOCHES ===");
 
-        // MODIFICADO: Usar el sistema de noches
+        // Limpiar cualquier estado previo
+        GameStateManager.isLoadingFromSave = false;
+
+        // Resetear PlayerPrefs de puertas y llaves (para nueva partida limpia)
+        PlayerPrefs.DeleteAll();
+        PlayerPrefs.Save();
+
+        // Usar el sistema de noches
         NightSystem.StartNewGame();
     }
 
     public void ContinueGame()
     {
-        SaveData data = SaveSystem.LoadGame();
+        if (!isInitialized)
+        {
+            Debug.LogWarning("MainMenu no está inicializado, esperando...");
+            StartCoroutine(WaitAndExecute(() => ContinueGame()));
+            return;
+        }
 
+        SaveData data = SaveSystem.LoadGame();
         if (data != null && data.hasSavedGame)
         {
-            Debug.Log($"Continuando partida guardada - Escena: {data.sceneName}");
+            Debug.Log($"=== CONTINUANDO PARTIDA GUARDADA ===");
+            Debug.Log($"  Escena: {data.sceneName}");
+            Debug.Log($"  Fecha: {data.saveDateTime}");
+            Debug.Log($"  Llaves guardadas: {data.collectedKeyIDs.Count}");
 
             // Marcar que venimos de continuar
             GameStateManager.isLoadingFromSave = true;
@@ -60,13 +103,21 @@ public class MainMenuManager : MonoBehaviour
         }
     }
 
+    IEnumerator WaitAndExecute(System.Action action)
+    {
+        yield return new WaitUntil(() => isInitialized);
+        action?.Invoke();
+    }
+
     public void ShowAchievements()
     {
+        Debug.Log("Navegando a Achievements");
         SceneManager.LoadScene("AchievementsMenu");
     }
 
     public void ShowCredits()
     {
+        Debug.Log("Navegando a Credits");
         SceneManager.LoadScene("CreditsMenu");
     }
 
@@ -77,6 +128,13 @@ public class MainMenuManager : MonoBehaviour
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.isPlaying = false;
 #endif
+    }
+
+    void OnEnable()
+    {
+        // Asegurar cursor visible cuando se habilita el menú
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
     }
 
     [ContextMenu("Test - Delete Save File")]
@@ -92,11 +150,11 @@ public class MainMenuManager : MonoBehaviour
     {
         bool hasSave = SaveSystem.HasSavedGame();
         Debug.Log($"Has saved game: {hasSave}");
-
         if (hasSave)
         {
             SaveData data = SaveSystem.LoadGame();
             Debug.Log($"Save details - Scene: {data.sceneName}, Date: {data.saveDateTime}");
+            Debug.Log($"Keys saved: {data.collectedKeyIDs.Count}");
         }
     }
 }
