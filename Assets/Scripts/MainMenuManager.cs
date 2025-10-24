@@ -11,6 +11,13 @@ public class MainMenuManager : MonoBehaviour
 
     private bool isInitialized = false;
 
+    void Awake()
+    {
+        // CRÍTICO: Resetear el tiempo al cargar el menú
+        Time.timeScale = 1f;
+        Debug.Log("MainMenu: Time.timeScale reseteado a 1");
+    }
+
     void Start()
     {
         // Asegurar que el cursor esté visible y desbloqueado en el menú
@@ -62,6 +69,9 @@ public class MainMenuManager : MonoBehaviour
 
         Debug.Log("=== NUEVA PARTIDA - INICIANDO SISTEMA DE NOCHES ===");
 
+        // CRÍTICO: Asegurar que el tiempo esté normal
+        Time.timeScale = 1f;
+
         // Limpiar cualquier estado previo
         GameStateManager.isLoadingFromSave = false;
 
@@ -90,6 +100,9 @@ public class MainMenuManager : MonoBehaviour
             Debug.Log($"  Fecha: {data.saveDateTime}");
             Debug.Log($"  Llaves guardadas: {data.collectedKeyIDs.Count}");
 
+            // CRÍTICO: Asegurar que el tiempo esté normal
+            Time.timeScale = 1f;
+
             // Marcar que venimos de continuar
             GameStateManager.isLoadingFromSave = true;
 
@@ -99,6 +112,7 @@ public class MainMenuManager : MonoBehaviour
         else
         {
             Debug.LogWarning("No hay partida guardada para continuar");
+            Time.timeScale = 1f;
             SceneManager.LoadScene("PoliNights");
         }
     }
@@ -112,12 +126,14 @@ public class MainMenuManager : MonoBehaviour
     public void ShowAchievements()
     {
         Debug.Log("Navegando a Achievements");
+        Time.timeScale = 1f;
         SceneManager.LoadScene("AchievementsMenu");
     }
 
     public void ShowCredits()
     {
         Debug.Log("Navegando a Credits");
+        Time.timeScale = 1f;
         SceneManager.LoadScene("CreditsMenu");
     }
 
@@ -135,6 +151,9 @@ public class MainMenuManager : MonoBehaviour
         // Asegurar cursor visible cuando se habilita el menú
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
+
+        // Asegurar que el tiempo esté normal
+        Time.timeScale = 1f;
     }
 
     [ContextMenu("Test - Delete Save File")]

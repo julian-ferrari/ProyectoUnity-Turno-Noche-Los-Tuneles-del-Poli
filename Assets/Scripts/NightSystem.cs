@@ -105,13 +105,13 @@ public class NightSystem : MonoBehaviour
         fadeRect.anchorMax = Vector2.one;
         fadeRect.sizeDelta = Vector2.zero;
 
-        // Crear imagen de noche - CORREGIDO para que ocupe toda la pantalla
+        // Crear imagen de noche
         GameObject imageObj = new GameObject("NightImage");
         imageObj.transform.SetParent(nightCanvas.transform, false);
 
         nightImage = imageObj.AddComponent<Image>();
         nightImage.color = new Color(1, 1, 1, 0);
-        nightImage.preserveAspect = false; // No preservar aspecto para llenar pantalla
+        nightImage.preserveAspect = false;
         nightImage.raycastTarget = false;
 
         RectTransform imageRect = nightImage.GetComponent<RectTransform>();
@@ -119,8 +119,8 @@ public class NightSystem : MonoBehaviour
         imageRect.anchorMax = Vector2.one;
         imageRect.pivot = new Vector2(0.5f, 0.5f);
         imageRect.anchoredPosition = Vector2.zero;
-        imageRect.offsetMin = Vector2.zero; // Eliminar márgenes
-        imageRect.offsetMax = Vector2.zero; // Eliminar márgenes
+        imageRect.offsetMin = Vector2.zero;
+        imageRect.offsetMax = Vector2.zero;
 
         // Ocultar todo al inicio
         nightCanvas.gameObject.SetActive(false);
@@ -138,12 +138,49 @@ public class NightSystem : MonoBehaviour
 
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
+        Debug.Log($"NightSystem: Escena cargada - {scene.name}");
+
         // Si estamos en la escena del juego y debemos mostrar la imagen de noche
         if (scene.name == gameSceneName && shouldShowNightImage)
         {
             shouldShowNightImage = false;
             StartCoroutine(ShowNightImageSequence(nightToShow));
         }
+
+        // Si cargamos el menú principal, asegurar que todo esté limpio
+        if (scene.name == mainMenuSceneName)
+        {
+            Debug.Log("NightSystem: Limpiando UI para menú principal");
+            CleanupUI();
+        }
+    }
+
+    /// <summary>
+    /// Limpia la UI del NightSystem (oculta todo)
+    /// </summary>
+    void CleanupUI()
+    {
+        if (nightCanvas != null)
+        {
+            nightCanvas.gameObject.SetActive(false);
+        }
+
+        if (nightImage != null)
+        {
+            Color c = nightImage.color;
+            c.a = 0;
+            nightImage.color = c;
+        }
+
+        if (fadeImage != null)
+        {
+            Color c = fadeImage.color;
+            c.a = 0;
+            fadeImage.color = c;
+        }
+
+        isShowingNight = false;
+        Debug.Log("NightSystem UI limpiada");
     }
 
     /// <summary>
@@ -282,13 +319,16 @@ public class NightSystem : MonoBehaviour
             audioSource.PlayOneShot(gameOverSound);
         }
 
-        // Fade in
+        // Fade in de la imagen de game over
         yield return StartCoroutine(FadeImage(nightImage, 0f, 1f, fadeInDuration));
 
         // Mantener visible más tiempo para game over
         yield return new WaitForSeconds(displayDuration + 2f);
 
-        // Fade a negro completo
+        // Fade out de la imagen de game over
+        yield return StartCoroutine(FadeImage(nightImage, 1f, 0f, fadeOutDuration));
+
+        // Fade a negro completo para transición
         yield return StartCoroutine(FadeImage(fadeImage, 0f, 1f, fadeOutDuration));
 
         // Resetear sistema
@@ -297,15 +337,27 @@ public class NightSystem : MonoBehaviour
 
         Debug.Log("Cargando menú principal...");
 
-        // CORREGIDO: Cargar escena con callback
+        // Cargar escena de forma asíncrona
         AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(mainMenuSceneName);
-        asyncLoad.completed += (op) =>
+
+        // Esperar a que la escena esté lista
+        while (!asyncLoad.isDone)
         {
-            Debug.Log("Menú principal cargado");
-            // Fade desde negro en el menú
-            StartCoroutine(FadeImage(fadeImage, 1f, 0f, 1f));
-            isShowingNight = false;
-        };
+            yield return null;
+        }
+
+        Debug.Log("Menú principal cargado, haciendo fade desde negro");
+
+        // Esperar un frame para asegurar que la escena esté completamente inicializada
+        yield return new WaitForEndOfFrame();
+
+        // Fade desde negro en el menú principal
+        yield return StartCoroutine(FadeImage(fadeImage, 1f, 0f, 1f));
+
+        // Limpiar y ocultar todo
+        CleanupUI();
+
+        Debug.Log("=== GAME OVER COMPLETO - MENÚ PRINCIPAL VISIBLE ===");
     }
 
     IEnumerator FadeImage(Image image, float startAlpha, float endAlpha, float duration)
@@ -315,7 +367,7 @@ public class NightSystem : MonoBehaviour
 
         while (elapsed < duration)
         {
-            elapsed += Time.deltaTime;
+            elapsed += Time.unscaledDeltaTime; // Usar unscaled para que funcione aunque el juego esté pausado
             float alpha = Mathf.Lerp(startAlpha, endAlpha, elapsed / duration);
             color.a = alpha;
             image.color = color;
@@ -370,5 +422,11 @@ public class NightSystem : MonoBehaviour
         PlayerPrefs.SetInt("CurrentNight", 1);
         PlayerPrefs.Save();
         Debug.Log("Noche reseteada a 1");
+    }
+
+    [ContextMenu("Force Cleanup UI")]
+    void ForceCleanup()
+    {
+        CleanupUI();
     }
 }
