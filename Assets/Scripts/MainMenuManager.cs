@@ -10,7 +10,6 @@ public class MainMenuManager : MonoBehaviour
 
     void Start()
     {
-        // Habilitar/deshabilitar el botón Continuar según haya guardado
         UpdateContinueButton();
     }
 
@@ -21,7 +20,6 @@ public class MainMenuManager : MonoBehaviour
             bool hasSave = SaveSystem.HasSavedGame();
             continueButton.interactable = hasSave;
 
-            // Opcional: Cambiar el color del botón para indicar visualmente
             if (hasSave)
             {
                 Debug.Log("Partida guardada detectada - Botón Continuar habilitado");
@@ -35,11 +33,10 @@ public class MainMenuManager : MonoBehaviour
 
     public void NewGame()
     {
-        // Opcional: Eliminar guardado anterior al iniciar nueva partida
-        // SaveSystem.DeleteSave();
+        Debug.Log("=== NUEVA PARTIDA - INICIANDO SISTEMA DE NOCHES ===");
 
-        Debug.Log("Iniciando nueva partida");
-        SceneManager.LoadScene("PoliNights");
+        // MODIFICADO: Usar el sistema de noches
+        NightSystem.StartNewGame();
     }
 
     public void ContinueGame()
@@ -50,7 +47,7 @@ public class MainMenuManager : MonoBehaviour
         {
             Debug.Log($"Continuando partida guardada - Escena: {data.sceneName}");
 
-            // Marcar que venimos de "Continuar" para restaurar posición
+            // Marcar que venimos de continuar
             GameStateManager.isLoadingFromSave = true;
 
             // Cargar la escena guardada
@@ -59,7 +56,6 @@ public class MainMenuManager : MonoBehaviour
         else
         {
             Debug.LogWarning("No hay partida guardada para continuar");
-            // Fallback: cargar escena normal
             SceneManager.LoadScene("PoliNights");
         }
     }
@@ -83,7 +79,6 @@ public class MainMenuManager : MonoBehaviour
 #endif
     }
 
-    // Método auxiliar para probar el sistema de guardado en el editor
     [ContextMenu("Test - Delete Save File")]
     void TestDeleteSave()
     {
@@ -97,6 +92,7 @@ public class MainMenuManager : MonoBehaviour
     {
         bool hasSave = SaveSystem.HasSavedGame();
         Debug.Log($"Has saved game: {hasSave}");
+
         if (hasSave)
         {
             SaveData data = SaveSystem.LoadGame();
