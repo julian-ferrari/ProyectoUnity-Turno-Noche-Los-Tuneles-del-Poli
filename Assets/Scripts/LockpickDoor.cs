@@ -64,11 +64,19 @@ public class LockpickDoor : MonoBehaviour
             {
                 if (inventoryManager != null && inventoryManager.HasLockpick())
                 {
-                    ShowPrompt("Mantén E para forzar la cerradura");
-
-                    if (Input.GetKeyDown(interactionKey))
+                    // Verificar si la ganzúa está EQUIPADA
+                    if (inventoryManager.GetSelectedItemType() == InventoryManager.ItemType.Lockpick)
                     {
-                        StartLockpicking();
+                        ShowPrompt("Mantén E para forzar la cerradura");
+
+                        if (Input.GetKeyDown(interactionKey))
+                        {
+                            StartLockpicking();
+                        }
+                    }
+                    else
+                    {
+                        ShowPrompt("Equipa la ganzúa para forzar la cerradura");
                     }
                 }
                 else
