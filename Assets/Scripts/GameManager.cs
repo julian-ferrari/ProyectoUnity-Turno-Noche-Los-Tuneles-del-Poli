@@ -86,41 +86,4 @@ public class GameManager : MonoBehaviour
         Debug.Log("Game Over! Noches completadas: " + (currentNight - 1));
         // Aquí mostrarías pantalla de game over
     }
-
-    void OnGUI()
-    {
-        // UI básica simplificada
-        GUI.Box(new Rect(10, 10, 200, 60), "");
-
-        GUIStyle labelStyle = new GUIStyle(GUI.skin.label);
-        labelStyle.fontSize = 14;
-
-        GUI.Label(new Rect(15, 15, 180, 20), "Noche: " + currentNight, labelStyle);
-
-        PlayerController player = FindFirstObjectByType<PlayerController>();
-        if (player != null)
-        {
-            string noiseIcon = player.currentNoiseLevel > 2f ? "Alto" : player.currentNoiseLevel > 1f ? "Medio" : "Bajo";
-            GUI.Label(new Rect(15, 35, 180, 20), "Ruido: " + noiseIcon, labelStyle);
-        }
-
-        // Mostrar estado del guardia para debug
-        GuardAI guard = FindFirstObjectByType<GuardAI>();
-        if (guard != null)
-        {
-            GUI.Label(new Rect(15, 55, 180, 20), "Guardia: " + guard.currentState.ToString(), labelStyle);
-        }
-
-        // Botón de reinicio manual (útil para testing)
-        if (GUI.Button(new Rect(10, 90, 100, 30), "Reiniciar (R)"))
-        {
-            RestartNight();
-        }
-
-        // Atajo de teclado
-        if (Input.GetKeyDown(KeyCode.R))
-        {
-            RestartNight();
-        }
-    }
 }
