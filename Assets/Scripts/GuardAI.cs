@@ -93,8 +93,43 @@ public class GuardAI : MonoBehaviour
         player = FindFirstObjectByType<PlayerController>().transform;
         playerController = player.GetComponent<PlayerController>();
 
+        // CAMBIO CRÍTICO AQUÍ:
         if (guardAnimator == null)
-            guardAnimator = GetComponentInChildren<Animator>();
+        {
+            guardAnimator = GetComponent<Animator>();
+            if (guardAnimator == null)
+            {
+                guardAnimator = GetComponentInChildren<Animator>();
+            }
+        }
+
+        if (guardAnimator == null)
+        {
+            guardAnimator = GetComponent<Animator>();
+            if (guardAnimator == null)
+            {
+                guardAnimator = GetComponentInChildren<Animator>();
+            }
+        }
+
+        if (guardAnimator == null)
+        {
+            Debug.LogError($"[{gameObject.name}] ¡NO SE ENCONTRÓ ANIMATOR!");
+        }
+        else
+        {
+            Debug.Log($"[{gameObject.name}] Animator encontrado: {guardAnimator.name}");
+
+            if (guardAnimator.runtimeAnimatorController == null)
+            {
+                Debug.LogError($"[{gameObject.name}] ¡ANIMATOR CONTROLLER ES NULL!");
+            }
+            else
+            {
+                Debug.Log($"[{gameObject.name}] Animator Controller: {guardAnimator.runtimeAnimatorController.name}");
+            }
+        }
+
         if (audioSource == null)
             audioSource = GetComponent<AudioSource>();
 
@@ -854,6 +889,12 @@ public class GuardAI : MonoBehaviour
             return;
         }
 
+        if (guardAnimator.runtimeAnimatorController == null)
+        {
+            Debug.LogError("AnimatorController es NULL!");
+            return;
+        }
+
         float currentSpeed = GetCurrentSpeed();
 
         // Si está esperando en un punto de patrulla, forzar speed a 0
@@ -862,10 +903,16 @@ public class GuardAI : MonoBehaviour
             currentSpeed = 0f;
         }
 
+        // DEBUG CRÍTICO - Agregá estas líneas:
+        Debug.Log($"[Guard Animation] Speed: {currentSpeed}, State: {currentState}, IsChasing: {currentState == GuardState.Chasing}");
+
         guardAnimator.SetFloat("Speed", currentSpeed);
         guardAnimator.SetBool("IsChasing", currentState == GuardState.Chasing);
         guardAnimator.SetBool("IsInvestigating", currentState == GuardState.Investigating);
         guardAnimator.SetFloat("Alertness", alertnessLevel / 100f);
+
+        // Verificar si realmente se actualizó:
+        Debug.Log($"[Guard Animation] Speed en Animator: {guardAnimator.GetFloat("Speed")}");
     }
 
     float GetCurrentSpeed()
